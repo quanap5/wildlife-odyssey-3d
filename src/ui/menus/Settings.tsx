@@ -1,5 +1,5 @@
 /** Settings: graphics, audio, controls, language, time of day and weather. */
-import type { QualityLevel } from '../../config';
+import { MINIMAP, type MinimapSize, type QualityLevel } from '../../config';
 import { useT, type TextKey } from '../../i18n';
 import { useGame, type Settings } from '../../store/gameStore';
 import { runtime, type WeatherState } from '../../store/runtime';
@@ -18,6 +18,8 @@ const CONTROLS: [string, TextKey][] = [
   ['B', 'control.binoculars'],
   ['X', 'control.macro'],
   ['V', 'control.perspective'],
+  ['N', 'control.minimapZoom'],
+  ['Q', 'control.quickView'],
   ['Z', 'control.slowmo'],
   ['M', 'control.map'],
   ['J', 'control.journal'],
@@ -56,7 +58,9 @@ export function SettingsBody({ inGame }: { inGame: boolean }): React.JSX.Element
   const setQuality = useGame((g) => g.setQuality);
   const weatherMode = useGame((g) => g.weatherMode);
   const patch = useGame((g) => g.patch);
-  const toggle = (key: keyof Pick<Settings, 'adaptive' | 'showPerf' | 'invertY'>): void => set(key, !s[key]);
+  const toggle = (key: keyof Pick<Settings, 'adaptive' | 'showPerf' | 'invertY' | 'minimap' | 'heldItems'>): void => set(key, !s[key]);
+  const viewMode = useGame((g) => g.viewMode);
+  const setViewMode = useGame((g) => g.setViewMode);
   const onOff = [
     { value: 1, label: t('common.on') },
     { value: 0, label: t('common.off') },
@@ -86,6 +90,38 @@ export function SettingsBody({ inGame }: { inGame: boolean }): React.JSX.Element
       <div className="field">
         <span>{t('settings.perf')}</span>
         <Seg value={s.showPerf ? 1 : 0} options={onOff} onChange={() => toggle('showPerf')} />
+      </div>
+
+      <h4>{t('settings.hud')}</h4>
+      <div className="field">
+        <span>{t('settings.minimap')}</span>
+        <Seg testId="set-minimap" value={s.minimap ? 1 : 0} options={onOff} onChange={() => toggle('minimap')} />
+      </div>
+      <div className="field">
+        <span>{t('settings.minimapMode')}</span>
+        <Seg
+          testId="set-minimap-mode"
+          value={s.minimapMode}
+          options={(['rotate', 'north'] as const).map((m) => ({ value: m, label: t(`settings.minimapMode.${m}`) }))}
+          onChange={(v) => set('minimapMode', v)}
+        />
+      </div>
+      <div className="field">
+        <span>{t('settings.minimapSize')}</span>
+        <Seg<MinimapSize>
+          testId="set-minimap-size"
+          value={s.minimapSize}
+          options={(Object.keys(MINIMAP.sizes) as MinimapSize[]).map((m) => ({ value: m, label: t(`settings.size.${m}`) }))}
+          onChange={(v) => set('minimapSize', v)}
+        />
+      </div>
+      <div className="field">
+        <span>{t('settings.heldItems')}</span>
+        <Seg testId="set-held" value={s.heldItems ? 1 : 0} options={onOff} onChange={() => toggle('heldItems')} />
+      </div>
+      <div className="field">
+        <span>{t('settings.view')}</span>
+        <Seg testId="set-view" value={viewMode} options={(['first', 'third'] as const).map((m) => ({ value: m, label: t(`settings.view.${m}`) }))} onChange={setViewMode} />
       </div>
 
       <h4>{t('settings.audio')}</h4>

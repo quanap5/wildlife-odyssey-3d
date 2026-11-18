@@ -8,6 +8,7 @@ import type { PhysicsWorld } from '../engine/physics/physics';
 import { RenderLoop } from '../engine/rendering/RenderLoop';
 import { Ambience } from '../world/weather/Ambience';
 import { Player } from '../entities/player/Player';
+import { ViewModel } from '../entities/player/ViewModel';
 import { Wildlife } from '../entities/wildlife/Wildlife';
 import { useGame } from '../store/gameStore';
 import { runtime } from '../store/runtime';
@@ -82,6 +83,7 @@ export function GameCanvas({ physics }: { physics: PhysicsWorld | null }): React
       <WaypointBeacon />
       <Wildlife />
       <Player physics={physics} />
+      <ViewModel />
       <InteractionSystem />
       <Director />
       <RenderLoop />

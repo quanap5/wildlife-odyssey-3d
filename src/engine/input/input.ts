@@ -10,7 +10,11 @@ const GAME_KEYS = new Set([
   'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'Space', 'Tab',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyE', 'KeyF', 'KeyC', 'KeyB', 'KeyV', 'KeyM', 'KeyJ', 'KeyI',
   'KeyX', 'KeyZ', 'KeyT', 'KeyR', 'KeyO', 'KeyH', 'KeyG', 'F3', 'BracketLeft', 'BracketRight', 'Minus', 'Equal', 'Enter',
+  'KeyN', 'KeyQ',
 ]);
+
+/** Keys whose release matters: the equipment wheel (Tab) and Quick View (Q) show only while held. */
+const HOLD_KEYS = new Set(['Tab', 'KeyQ']);
 
 class InputManager {
   private readonly down = new Set<string>();
@@ -73,10 +77,14 @@ class InputManager {
 
   private readonly onKeyUp = (e: KeyboardEvent): void => {
     this.down.delete(e.code);
-    if (e.code === 'Tab') for (const h of this.handlers) h('Tab:up', e);
+    // Hold-to-show keys also report their release.
+    if (HOLD_KEYS.has(e.code)) for (const h of this.handlers) h(`${e.code}:up`, e);
   };
 
   private readonly onBlur = (): void => {
+    // A key released while the window is elsewhere never sends keyup: treat held keys as released.
+    const blurEvent = new KeyboardEvent('keyup');
+    for (const code of HOLD_KEYS) if (this.down.has(code)) for (const h of this.handlers) h(`${code}:up`, blurEvent);
     this.down.clear();
     this.dragging = false;
   };

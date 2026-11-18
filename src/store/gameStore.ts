@@ -3,12 +3,13 @@
  * everything that is saved. High-frequency simulation state lives in `runtime`.
  */
 import { create } from 'zustand';
-import { PHOTO, SAVE_VERSION, SETTINGS_KEY, type QualityLevel } from '../config';
+import { LENS_TOOLS, MINIMAP, PHOTO, SAVE_VERSION, SETTINGS_KEY, type MinimapSize, type QualityLevel } from '../config';
 import { QUESTS, type GameEvent } from '../data/quests/quests';
 import { ANIMAL_CATEGORIES, getSpecies, speciesText, type Lang } from '../data/species';
 import { translate, type Params, type TextKey } from '../i18n/translate';
 import type { PhotoScore } from '../systems/photography/quality';
 import type { DiscoveryRecord, PhotoMeta, ResearchRole, SaveData, VideoMeta } from '../systems/persistence/save';
+import { emptySeen, snapshotSeen, type QuickSeen } from '../systems/collection/quickView';
 import { applyEvent, initialQuestState, type QuestState } from '../systems/quests/engine';
 import { runtime, type WeatherState } from './runtime';
 
@@ -35,6 +36,17 @@ export interface Settings {
   invertY: boolean;
   /** Real minutes per in-game day; 0 pauses the clock. */
   dayMinutes: number;
+  /** Corner minimap. */
+  minimap: boolean;
+  /** `rotate`: the player's heading points up. `north`: north points up. */
+  minimapMode: 'rotate' | 'north';
+  minimapSize: MinimapSize;
+  /** Index into MINIMAP.radii (0 near .. 2 far). */
+  minimapZoom: number;
+  /** Show the research tool being held, in the hand in first person and on the avatar in third. */
+  heldItems: boolean;
+  /** The view the player last chose with V. */
+  viewMode: ViewMode;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -52,6 +64,12 @@ export const DEFAULT_SETTINGS: Settings = {
   sensitivity: 1,
   invertY: false,
   dayMinutes: 24,
+  minimap: true,
+  minimapMode: 'rotate',
+  minimapSize: 'medium',
+  minimapZoom: 1,
+  heldItems: true,
+  viewMode: 'first',
 };
 
 /** Graphics presets applied when the overall quality level changes. */
@@ -61,16 +79,30 @@ export const QUALITY_PRESETS: Record<QualityLevel, Pick<Settings, 'renderScale' 
   high: { renderScale: 1, shadows: 'high', vegetation: 1, drawDistance: 'high' },
 };
 
+/**
+ * Turns whatever was stored into valid settings. Settings written by an older build lack
+ * the newer keys and simply receive their defaults; values that no longer make sense are reset.
+ */
+export function normalizeSettings(stored: unknown): Settings {
+  const parsed = stored !== null && typeof stored === 'object' && !Array.isArray(stored) ? (stored as Partial<Settings>) : {};
+  const merged: Settings = { ...DEFAULT_SETTINGS, ...parsed };
+  if (merged.language !== 'vi' && merged.language !== 'en') merged.language = DEFAULT_SETTINGS.language;
+  if (!(merged.quality in QUALITY_PRESETS)) merged.quality = DEFAULT_SETTINGS.quality;
+  if (!(merged.drawDistance in QUALITY_PRESETS)) merged.drawDistance = DEFAULT_SETTINGS.drawDistance;
+  if (typeof merged.minimap !== 'boolean') merged.minimap = DEFAULT_SETTINGS.minimap;
+  if (merged.minimapMode !== 'rotate' && merged.minimapMode !== 'north') merged.minimapMode = DEFAULT_SETTINGS.minimapMode;
+  if (!(merged.minimapSize in MINIMAP.sizes)) merged.minimapSize = DEFAULT_SETTINGS.minimapSize;
+  if (!Number.isInteger(merged.minimapZoom) || merged.minimapZoom < 0 || merged.minimapZoom >= MINIMAP.radii.length) merged.minimapZoom = DEFAULT_SETTINGS.minimapZoom;
+  if (typeof merged.heldItems !== 'boolean') merged.heldItems = DEFAULT_SETTINGS.heldItems;
+  if (merged.viewMode !== 'first' && merged.viewMode !== 'third') merged.viewMode = DEFAULT_SETTINGS.viewMode;
+  return merged;
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(SETTINGS_KEY) : null;
     if (!raw) return { ...DEFAULT_SETTINGS };
-    const parsed = JSON.parse(raw) as Partial<Settings>;
-    const merged = { ...DEFAULT_SETTINGS, ...parsed };
-    if (merged.language !== 'vi' && merged.language !== 'en') merged.language = DEFAULT_SETTINGS.language;
-    if (!(merged.quality in QUALITY_PRESETS)) merged.quality = DEFAULT_SETTINGS.quality;
-    if (!(merged.drawDistance in QUALITY_PRESETS)) merged.drawDistance = DEFAULT_SETTINGS.drawDistance;
-    return merged;
+    return normalizeSettings(JSON.parse(raw));
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
@@ -185,6 +217,12 @@ export interface GameState extends Progress {
   weatherMode: 'auto' | WeatherState;
   lastShot: LastShot | null;
   recording: boolean;
+  /** Quick View (hold Q) is showing. */
+  quickView: boolean;
+  /** What had been collected when Quick View was last closed; anything else counts as new. Not saved. */
+  quickSeen: QuickSeen;
+  /** When the minimap zoom was last changed (ms), so its label can show briefly. */
+  minimapZoomAt: number;
   /** Bumped whenever something worth saving happened. */
   dirty: number;
 
@@ -193,6 +231,8 @@ export interface GameState extends Progress {
   setTool: (t: Tool) => void;
   toggleTool: (t: Tool) => void;
   setViewMode: (v: ViewMode) => void;
+  setQuickView: (open: boolean) => void;
+  cycleMinimapZoom: () => void;
   setSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
   setQuality: (q: QualityLevel) => void;
   notify: (key: TextKey, params?: Params, kind?: NoticeKind) => void;
@@ -229,13 +269,15 @@ export interface GameState extends Progress {
 
 let noticeId = 1;
 
+const bootSettings = loadSettings();
+
 export const useGame = create<GameState>((set, get) => ({
   ...freshProgress('biologist'),
   screen: 'loading',
   overlay: 'none',
   tool: 'none',
-  viewMode: 'first',
-  settings: loadSettings(),
+  viewMode: bootSettings.viewMode,
+  settings: bootSettings,
   storagePersistent: true,
   savedAt: null,
   corruptSave: null,
@@ -257,6 +299,9 @@ export const useGame = create<GameState>((set, get) => ({
   weatherMode: 'auto',
   lastShot: null,
   recording: false,
+  quickView: false,
+  quickSeen: emptySeen(),
+  minimapZoomAt: 0,
   dirty: 0,
 
   setScreen: (screen) => set({ screen }),
@@ -264,15 +309,33 @@ export const useGame = create<GameState>((set, get) => ({
     const prev = get().overlay;
     if (prev === overlay) return;
     set({ overlay });
+    // Quick View is a glance while walking; any panel replaces it.
+    if (overlay !== 'none' && get().quickView) get().setQuickView(false);
     if (overlay === 'journal') get().emit({ type: 'journal-open' });
   },
   setTool: (tool) => {
     if (get().tool === tool) return;
     set({ tool, hudHidden: false });
+    if ((LENS_TOOLS as readonly string[]).includes(tool) && get().quickView) get().setQuickView(false);
     if (tool !== 'none') get().emit({ type: 'tool', tool });
   },
   toggleTool: (tool) => get().setTool(get().tool === tool ? 'none' : tool),
-  setViewMode: (viewMode) => set({ viewMode }),
+  setViewMode: (viewMode) => {
+    set({ viewMode });
+    get().setSetting('viewMode', viewMode);
+  },
+  setQuickView: (open) => {
+    if (get().quickView === open) return;
+    // Closing the panel marks everything collected so far as seen.
+    if (open) set({ quickView: true });
+    else set({ quickView: false, quickSeen: snapshotSeen(get()) });
+  },
+  cycleMinimapZoom: () => {
+    const s = get();
+    const next = (s.settings.minimapZoom + 1) % MINIMAP.radii.length;
+    s.setSetting('minimapZoom', next);
+    set({ minimapZoomAt: Date.now() });
+  },
   setSetting: (key, value) => {
     const settings = { ...get().settings, [key]: value };
     persistSettings(settings);
@@ -464,7 +527,8 @@ export const useGame = create<GameState>((set, get) => ({
       screen: 'playing',
       overlay: 'none',
       tool: 'none',
-      viewMode: 'first',
+      quickView: false,
+      quickSeen: emptySeen(),
       notices: [],
       prompt: null,
       journalSpecies: null,
@@ -496,10 +560,13 @@ export const useGame = create<GameState>((set, get) => ({
       screen: 'playing',
       overlay: 'none',
       tool: 'none',
+      quickView: false,
       notices: [],
       prompt: null,
       slowmo: 0,
     });
+    // What the save already holds is not news.
+    set({ quickSeen: snapshotSeen(get()) });
     runtime.player.pos.set(d.player.x, d.player.y, d.player.z);
     runtime.player.vel.set(0, 0, 0);
     runtime.player.yaw = d.player.yaw;
@@ -534,7 +601,7 @@ export const useGame = create<GameState>((set, get) => ({
       completionShown: s.completionShown,
     };
   },
-  resetAll: () => set({ ...freshProgress('biologist'), savedAt: null, corruptSave: null, notices: [], dirty: 0 }),
+  resetAll: () => set({ ...freshProgress('biologist'), savedAt: null, corruptSave: null, notices: [], dirty: 0, quickView: false, quickSeen: emptySeen() }),
 }));
 
 /** Derived counters for the progress page and quest text. */

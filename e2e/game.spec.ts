@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { aimAtAgent, frameStats, lockOn, openMenu, playerPos, standNear, startExpedition, useLowGraphics, watch } from './helpers';
+import { aimAtAgent, frameStats, heldItem, lockOn, openMenu, playerPos, scannerScreenPixels, standNear, startExpedition, useLowGraphics, watch } from './helpers';
 
 test.describe('Wildlife Odyssey 3D', () => {
   test('main menu: loads, renders a 3D world, switches language, opens the field guide', async ({ page }) => {
@@ -565,6 +565,313 @@ test.describe('Wildlife Odyssey 3D', () => {
       await page.getByTestId('confirm-yes').click();
       await expect(page.getByTestId('menu-continue')).toBeDisabled({ timeout: 30_000 });
       expect(await page.evaluate((id) => Boolean(window.__WO__!.store.getState().discovered[id]), plantId)).toBe(false);
+    });
+
+    expect(diag.errors, diag.errors.join('\n')).toEqual([]);
+    expect(diag.failedRequests, diag.failedRequests.join('\n')).toEqual([]);
+  });
+
+  test('HUD and hands: minimap, views, hand-held tools, badges and Quick View', async ({ page }) => {
+    test.setTimeout(25 * 60_000);
+    const diag = watch(page);
+    await useLowGraphics(page, 'en');
+    await openMenu(page);
+    await startExpedition(page, 'biologist');
+    const held = page.getByTestId('held-item');
+    const minimap = page.getByTestId('minimap');
+    const settings = (): Promise<Record<string, unknown>> => page.evaluate(() => JSON.parse(localStorage.getItem('wildlife-odyssey:settings') ?? '{}') as Record<string, unknown>);
+
+    await test.step('minimap sits in the top-right corner and follows the player', async () => {
+      await expect(minimap).toBeVisible();
+      const box = (await minimap.boundingBox())!;
+      const viewport = page.viewportSize()!;
+      expect(viewport.width - (box.x + box.width)).toBeLessThan(24);
+      expect(box.y).toBeLessThan(24);
+      expect(Math.abs(box.width - box.height)).toBeLessThan(1);
+      await expect(minimap).toHaveAttribute('data-mode', 'rotate');
+      const before = await playerPos(page);
+      await expect.poll(async () => Math.abs(Number(await minimap.getAttribute('data-px')) - before.x), { timeout: 15_000 }).toBeLessThan(0.2);
+      // Walk forward with the real key and watch the minimap's position follow.
+      await page.keyboard.down('KeyW');
+      await page.waitForFunction((b) => Math.hypot(window.__WO__!.runtime.player.pos.x - b.x, window.__WO__!.runtime.player.pos.z - b.z) > 2.5, before, { timeout: 60_000 });
+      await page.keyboard.up('KeyW');
+      await page.waitForTimeout(1500);
+      const after = await playerPos(page);
+      expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(2.5);
+      await expect.poll(async () => Math.hypot(Number(await minimap.getAttribute('data-px')) - after.x, Number(await minimap.getAttribute('data-pz')) - after.z), { timeout: 15_000 }).toBeLessThan(0.3);
+      // The canvas really is drawn: it is not one flat colour.
+      const colours = await page.evaluate(() => {
+        const c = document.querySelector<HTMLCanvasElement>('[data-testid="minimap"] canvas')!;
+        const { data } = c.getContext('2d')!.getImageData(0, 0, c.width, c.height);
+        const seen = new Set<number>();
+        for (let i = 0; i < data.length; i += 4 * 23) seen.add((data[i]! >> 4) | ((data[i + 1]! >> 4) << 4) | ((data[i + 2]! >> 4) << 8));
+        return seen.size;
+      });
+      expect(colours).toBeGreaterThan(8);
+      // Biome and coordinates sit under it.
+      await expect(page.getByTestId('hud-biome')).toContainText('Grassland');
+      await expect(page.getByTestId('hud-coords')).toHaveText(/^[EW] \d+ · [NS] \d+$/);
+    });
+
+    await test.step('N cycles the three minimap zoom levels and the choice is saved', async () => {
+      await expect(minimap).toHaveAttribute('data-zoom', '1');
+      // The label is on screen for under two seconds, which is shorter than one round trip to a
+      // software-rendered page, so record every label the minimap shows instead of polling for it.
+      await page.evaluate(() => {
+        const w = window as unknown as { zoomLabels: string[] };
+        w.zoomLabels = [];
+        new MutationObserver(() => {
+          const text = document.querySelector('[data-testid="minimap-zoom"]')?.textContent;
+          if (text && w.zoomLabels[w.zoomLabels.length - 1] !== text) w.zoomLabels.push(text);
+        }).observe(document.querySelector('[data-testid="minimap"]')!, { childList: true, subtree: true, characterData: true });
+      });
+      const radii: string[] = [];
+      for (const zoom of ['2', '0', '1']) {
+        await page.keyboard.press('KeyN');
+        await expect(minimap).toHaveAttribute('data-zoom', zoom);
+        radii.push((await minimap.getAttribute('data-radius'))!);
+        expect((await settings()).minimapZoom).toBe(Number(zoom));
+      }
+      expect(radii).toEqual(['240', '60', '120']);
+      const labels = await page.evaluate(() => (window as unknown as { zoomLabels: string[] }).zoomLabels);
+      expect(labels).toEqual(['Far · 240 m', 'Near · 60 m', 'Medium · 120 m']);
+      // The label is shown only briefly.
+      await expect(page.getByTestId('minimap-zoom')).toBeHidden({ timeout: 10_000 });
+    });
+
+    await test.step('badges: tool bar, clock, weather and an empty collection', async () => {
+      await expect(page.getByTestId('toolbar')).toBeVisible();
+      await expect(page.getByTestId('toolbar')).toHaveAttribute('data-active', 'none');
+      await expect(page.getByTestId('hud-tool')).toContainText('Hands free');
+      await expect(page.getByTestId('hud-badges').locator('[data-badge="time"]')).toHaveText(/\d\d:\d\d/);
+      await expect(page.getByTestId('hud-badges').locator('[data-badge="weather"]')).not.toBeEmpty();
+      await expect(page.getByTestId('hud-collection')).toHaveAttribute('data-count', '0');
+      await expect(page.getByTestId('hud-collection')).toContainText('0/36');
+      // The research camp counts as the first landmark found, so the collection starts with something new;
+      // one look at Quick View clears the mark.
+      await expect(page.getByTestId('hud-collection-dot')).toBeVisible();
+      await page.keyboard.down('KeyQ');
+      await expect(page.getByTestId('quick-row-landmarks')).toHaveAttribute('data-new', '1');
+      await expect(page.getByTestId('quick-row-species')).toHaveAttribute('data-count', '0');
+      await page.keyboard.up('KeyQ');
+      await expect(page.getByTestId('quick-view')).toBeHidden();
+      await expect(page.getByTestId('hud-collection-dot')).toHaveCount(0);
+      await expect(page.getByTestId('hud-mission-badges')).toContainText('0/5');
+      // Nothing may sit over the middle of the screen or leave the window.
+      const layout = await page.evaluate(() => {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const ids = ['toolbar', 'hud-badges', 'minimap', 'hud-biome', 'tracker', 'compass'];
+        return ids.map((id) => {
+          const r = document.querySelector(`[data-testid="${id}"]`)!.getBoundingClientRect();
+          return { id, inside: r.left >= 0 && r.top >= 0 && r.right <= vw + 0.5 && r.bottom <= vh + 0.5, coversCentre: r.left < vw / 2 && r.right > vw / 2 && r.top < vh / 2 && r.bottom > vh / 2 };
+        });
+      });
+      for (const l of layout) expect(l, l.id).toMatchObject({ inside: true, coversCentre: false });
+      const overlap = await page.evaluate(() => {
+        const rect = (id: string): DOMRect => document.querySelector(`[data-testid="${id}"]`)!.getBoundingClientRect();
+        const hit = (a: DOMRect, b: DOMRect): boolean => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+        return { toolbarBadges: hit(rect('toolbar'), rect('hud-badges')), minimapCompass: hit(rect('minimap'), rect('compass')), trackerCompass: hit(rect('tracker'), rect('compass')) };
+      });
+      expect(overlap).toEqual({ toolbarBadges: false, minimapCompass: false, trackerCompass: false });
+    });
+
+    await test.step('scanner (F) is held in the hand; it is on screen but never in a captured frame', async () => {
+      await expect(held).toHaveAttribute('data-item', 'none');
+      await page.keyboard.press('KeyF');
+      await expect(held).toHaveAttribute('data-item', 'scanner');
+      await page.waitForFunction(() => window.__WO__!.runtime.held.raise >= 1 && window.__WO__!.runtime.viewModel.visible, undefined, { timeout: 30_000 });
+      expect(await heldItem(page)).toMatchObject({ item: 'scanner', atEye: false, viewModel: true });
+      await expect(minimap).toBeVisible();
+      // The frame as displayed shows the scanner's lit screen ...
+      const shown = await scannerScreenPixels(page, true);
+      expect(shown.hadViewModel).toBe(true);
+      expect(shown.pixels).toBeGreaterThan(150);
+      // ... and a captured frame of the same view does not contain a single pixel of it.
+      const captured = await scannerScreenPixels(page, false);
+      expect(captured.hadViewModel).toBe(false);
+      expect(captured.pixels).toBe(0);
+      expect(await heldItem(page)).toMatchObject({ item: 'scanner', viewModel: true });
+    });
+
+    let scanned = '';
+    await test.step('a scan fills the collection badge and marks it as new', async () => {
+      const plant = await page.evaluate(() => {
+        const wo = window.__WO__!;
+        const p = wo.runtime.player.pos;
+        const trees = wo.registry.plants.filter((c) => c.radius > 1.2 && wo.heightAt(c.x, c.z) > 0.5);
+        trees.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
+        const c = trees[0]!;
+        const d = Math.hypot(c.x - p.x, c.z - p.z) || 1;
+        wo.teleport(c.x + ((p.x - c.x) / d) * 9, c.z + ((p.z - c.z) / d) * 9);
+        return { speciesId: c.speciesId, x: c.x, y: c.y, z: c.z };
+      });
+      scanned = plant.speciesId;
+      const t0 = Date.now();
+      while (Date.now() - t0 < 90_000) {
+        await page.evaluate((c) => window.__WO__!.lookAt(c.x, c.y, c.z), plant);
+        await page.waitForTimeout(600);
+        if (await page.evaluate((id) => Boolean(window.__WO__!.store.getState().discovered[id]), scanned)) break;
+      }
+      expect(await page.evaluate((id) => Boolean(window.__WO__!.store.getState().discovered[id]), scanned)).toBe(true);
+      await page.keyboard.press('KeyF');
+      await expect(held).toHaveAttribute('data-item', 'none', { timeout: 15_000 });
+      await expect(page.getByTestId('hud-collection')).toHaveAttribute('data-count', '1');
+      await expect(page.getByTestId('hud-collection')).toContainText('1/36');
+      await expect(page.getByTestId('hud-collection-dot')).toBeVisible();
+    });
+
+    await test.step('camera (C): the prop goes up to the eye, then the lens view takes over; the photo is clean', async () => {
+      await page.keyboard.press('KeyC');
+      await expect(held).toHaveAttribute('data-item', 'camera');
+      await page.waitForFunction(() => window.__WO__!.runtime.held.atEye, undefined, { timeout: 30_000 });
+      expect(await heldItem(page)).toMatchObject({ item: 'camera', atEye: true, viewModel: false });
+      await expect(page.getByTestId('viewfinder')).toBeVisible();
+      // Lens tools clear the corners.
+      await expect(minimap).toBeHidden();
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => window.__WO__!.store.getState().photos.length === 1, undefined, { timeout: 60_000 });
+      expect(await page.evaluate(() => window.__WO__!.runtime.viewModel.lastCaptureHadViewModel)).toBe(false);
+      await page.keyboard.press('KeyC');
+      await expect(held).toHaveAttribute('data-item', 'none', { timeout: 15_000 });
+      await expect(minimap).toBeVisible();
+    });
+
+    await test.step('every tool, the map and the journal put the matching item in the hand', async () => {
+      for (const [key, item] of [['KeyB', 'binoculars'], ['KeyX', 'macro'], ['KeyF', 'scanner']] as const) {
+        await page.keyboard.press(key);
+        await expect(held).toHaveAttribute('data-item', item, { timeout: 15_000 });
+        await expect(page.getByTestId('hud')).toHaveAttribute('data-tool', item);
+        await page.keyboard.press(key);
+        await expect(held).toHaveAttribute('data-item', 'none', { timeout: 15_000 });
+      }
+      await page.keyboard.press('KeyM');
+      await expect(held).toHaveAttribute('data-item', 'map', { timeout: 15_000 });
+      await expect(page.getByTestId('map-panel')).toBeVisible();
+      await page.keyboard.press('KeyM');
+      await expect(page.getByTestId('map-panel')).toBeHidden();
+      await page.keyboard.press('KeyJ');
+      await expect(held).toHaveAttribute('data-item', 'journal', { timeout: 15_000 });
+      await expect(page.getByTestId('journal')).toBeVisible();
+      await page.keyboard.press('KeyJ');
+      await expect(page.getByTestId('journal')).toBeHidden();
+      await expect(held).toHaveAttribute('data-item', 'none', { timeout: 15_000 });
+    });
+
+    await test.step('Quick View: hold Q to see what was collected, keep walking, release to close', async () => {
+      const quick = page.getByTestId('quick-view');
+      await expect(quick).toBeHidden();
+      await page.keyboard.down('KeyQ');
+      await expect(quick).toBeVisible();
+      // Under the minimap, on the right, clear of the middle of the screen.
+      const q = (await quick.boundingBox())!;
+      const m = (await minimap.boundingBox())!;
+      const viewport = page.viewportSize()!;
+      expect(q.y).toBeGreaterThanOrEqual(m.y + m.height);
+      expect(q.x).toBeGreaterThan(viewport.width / 2);
+      expect(q.y + q.height).toBeLessThanOrEqual(viewport.height);
+      // The scanned species and the new photograph are there, marked new.
+      await expect(page.getByTestId('quick-row-species')).toHaveAttribute('data-count', '1');
+      await expect(page.getByTestId('quick-row-species')).toHaveAttribute('data-new', '1');
+      await expect(page.getByTestId('quick-species')).toHaveAttribute('data-species', scanned);
+      await expect(page.getByTestId('quick-row-photos')).toHaveAttribute('data-count', '1');
+      await expect(page.getByTestId('quick-photo')).toHaveCount(1);
+      await expect(page.getByTestId('quick-photo').locator('img')).toBeVisible({ timeout: 20_000 });
+      // Empty collections explain how to start them.
+      await expect(page.getByTestId('quick-row-videos')).toHaveAttribute('data-count', '0');
+      await expect(page.getByTestId('quick-row-videos')).toContainText('record');
+      await expect(quick).toContainText('J: open journal');
+      // The game is not paused and the player can still walk.
+      const s = await page.evaluate(() => ({ overlay: window.__WO__!.store.getState().overlay, paused: window.__WO__!.runtime.paused }));
+      expect(s).toEqual({ overlay: 'none', paused: false });
+      const before = await playerPos(page);
+      await page.keyboard.down('KeyW');
+      await page.waitForFunction((b) => Math.hypot(window.__WO__!.runtime.player.pos.x - b.x, window.__WO__!.runtime.player.pos.z - b.z) > 1.5, before, { timeout: 60_000 });
+      await page.keyboard.up('KeyW');
+      await expect(quick).toBeVisible();
+      await page.keyboard.up('KeyQ');
+      await expect(quick).toBeHidden();
+      // Looking at it clears the "new" mark.
+      await expect(page.getByTestId('hud-collection-dot')).toHaveCount(0);
+      // Not offered through a lens.
+      await page.keyboard.press('KeyB');
+      await page.keyboard.down('KeyQ');
+      await page.waitForTimeout(800);
+      await expect(quick).toBeHidden();
+      await page.keyboard.up('KeyQ');
+      await page.keyboard.press('KeyB');
+      await expect(held).toHaveAttribute('data-item', 'none', { timeout: 15_000 });
+    });
+
+    await test.step('V switches to the shoulder camera; a lens tool borrows first person and gives the view back', async () => {
+      const boom = (): Promise<{ third: number; back: number }> =>
+        page.evaluate(() => {
+          const wo = window.__WO__!;
+          const p = wo.runtime.player.pos;
+          const c = wo.runtime.camera.pos;
+          return { third: wo.runtime.camera.third, back: Math.hypot(c.x - p.x, c.z - p.z) };
+        });
+      expect((await boom()).third).toBe(0);
+      await page.keyboard.press('KeyV');
+      await expect(page.getByTestId('hud')).toHaveAttribute('data-view', 'third');
+      expect((await settings()).viewMode).toBe('third');
+      await page.waitForFunction(() => window.__WO__!.runtime.camera.third >= 1, undefined, { timeout: 30_000 });
+      await page.waitForFunction(
+        () => {
+          const wo = window.__WO__!;
+          return Math.hypot(wo.runtime.camera.pos.x - wo.runtime.player.pos.x, wo.runtime.camera.pos.z - wo.runtime.player.pos.z) > 1.5;
+        },
+        undefined,
+        { timeout: 30_000 },
+      );
+      // The camera never ends up under the ground.
+      const clear = await page.evaluate(() => {
+        const wo = window.__WO__!;
+        const c = wo.runtime.camera.pos;
+        return c.y - wo.heightAt(c.x, c.z);
+      });
+      expect(clear).toBeGreaterThan(0.3);
+      // The scanner works in third person and is carried by the avatar, not drawn as a view model.
+      await page.keyboard.press('KeyF');
+      await expect(held).toHaveAttribute('data-item', 'scanner', { timeout: 15_000 });
+      await page.waitForFunction(() => window.__WO__!.runtime.held.raise >= 1, undefined, { timeout: 30_000 });
+      expect(await heldItem(page)).toMatchObject({ item: 'scanner', viewModel: false });
+      expect((await boom()).third).toBe(1);
+      await page.keyboard.press('KeyF');
+      // Binoculars are looked through: first person while they are up ...
+      await page.keyboard.press('KeyB');
+      await page.waitForFunction(() => window.__WO__!.runtime.camera.third <= 0, undefined, { timeout: 30_000 });
+      expect((await boom()).back).toBeLessThan(0.2);
+      expect(await page.evaluate(() => window.__WO__!.store.getState().viewMode)).toBe('third');
+      // ... and the shoulder view comes back when they are put away.
+      await page.keyboard.press('KeyB');
+      await page.waitForFunction(() => window.__WO__!.runtime.camera.third >= 1, undefined, { timeout: 30_000 });
+      const frame = await frameStats(page);
+      expect(frame.distinct).toBeGreaterThan(40);
+      await page.keyboard.press('KeyV');
+      await expect(page.getByTestId('hud')).toHaveAttribute('data-view', 'first');
+      expect((await settings()).viewMode).toBe('first');
+      await page.waitForFunction(() => window.__WO__!.runtime.camera.third <= 0, undefined, { timeout: 30_000 });
+    });
+
+    await test.step('settings: minimap, orientation, size and hand-held items can be changed in game', async () => {
+      await page.keyboard.press('Escape');
+      await expect(page.getByTestId('pause')).toBeVisible();
+      await page.getByTestId('set-minimap-mode').getByRole('button', { name: 'North up' }).click();
+      await page.getByTestId('set-minimap-size').getByRole('button', { name: 'Large' }).click();
+      await page.getByTestId('set-held').getByRole('button', { name: 'Off' }).click();
+      expect(await settings()).toMatchObject({ minimapMode: 'north', minimapSize: 'large', heldItems: false });
+      await page.getByTestId('pause-resume').click();
+      await expect(page.getByTestId('pause')).toBeHidden();
+      await expect(minimap).toHaveAttribute('data-mode', 'north');
+      expect(Math.round((await minimap.boundingBox())!.width)).toBe(196);
+      await page.keyboard.press('KeyF');
+      await page.waitForTimeout(2500);
+      expect(await heldItem(page)).toMatchObject({ item: 'none', viewModel: false });
+      await page.keyboard.press('KeyF');
+      // The minimap can be switched off altogether.
+      await page.evaluate(() => window.__WO__!.store.getState().setSetting('minimap', false));
+      await expect(minimap).toBeHidden();
     });
 
     expect(diag.errors, diag.errors.join('\n')).toEqual([]);

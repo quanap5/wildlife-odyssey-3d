@@ -47,6 +47,12 @@ function pickOptions(tool: Tool, zoom: number, biologist: boolean): { maxDistanc
 }
 
 /** Performs the contextual interaction (E key or click with empty hands). */
+/** Examining a plant, a rock, tracks or an artifact: the specimen tray comes up for a moment (and stays while its panel is open). */
+function showSpecimen(): void {
+  runtime.held.flash = 'specimen';
+  runtime.held.flashUntil = performance.now() + 2200;
+}
+
 export function interact(): void {
   const st = useGame.getState();
   if (st.screen !== 'playing' || st.overlay !== 'none') return;
@@ -78,10 +84,12 @@ export function interact(): void {
         st.openReader({ title: it.title, body: it.body });
         break;
       case 'artifact':
+        showSpecimen();
         if (st.collectArtifact(it.id)) st.notify('notify.artifact', { name: translate(lang, it.name) }, 'discovery');
         st.openReader({ title: it.title, body: it.body });
         break;
       case 'tracks': {
+        showSpecimen();
         st.collectNote(it.id);
         const species = it.speciesId ? getSpecies(it.speciesId) : undefined;
         const dir = it.toward ? translate(lang, directionKey(it.toward[0] - it.x, it.toward[1] - it.z)) : '';
@@ -95,10 +103,12 @@ export function interact(): void {
   const t = runtime.target;
   if (t && t.distance <= PLAYER.interactRange + 1) {
     audio.ui();
+    if (t.kind === 'plant') showSpecimen();
     st.openInspect({ speciesId: t.speciesId, behavior: t.behavior });
     return;
   }
   if (nearby.rock) {
+    showSpecimen();
     audio.page();
     st.openReader({ title: 'rock.title', body: 'rock.body' });
   }

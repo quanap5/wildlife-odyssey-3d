@@ -42,6 +42,21 @@ export const APERTURES = [2.8, 4, 5.6, 8, 11, 16] as const;
 export const GRID_MODES = ['thirds', 'golden', 'diagonal', 'off'] as const;
 export const SLOWMO_PRESETS = [1, 0.5, 0.25] as const;
 
+/** Minimap: metres from the player to the rim at each zoom level (near, medium, far), and on-screen sizes. */
+export const MINIMAP = {
+  radii: [60, 120, 240],
+  sizes: { small: 132, medium: 164, large: 196 },
+  /** How long the zoom label stays up after N is pressed (ms). */
+  zoomLabelMs: 1600,
+} as const;
+export type MinimapSize = keyof typeof MINIMAP.sizes;
+
+/** Tools that are looked through: they force first person and clear the HUD corners. */
+export const LENS_TOOLS = ['camera', 'video', 'binoculars', 'macro'] as const;
+
+/** Third-person camera boom and view-switch timing. */
+export const VIEW = { boom: 3.4, minBoom: 0.6, shoulder: 0.72, lift: 0.36, transition: 0.25 } as const;
+
 export const PHOTO = {
   highQuality: 70,
   excellent: 85,

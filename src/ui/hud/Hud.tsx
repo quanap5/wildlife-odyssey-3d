@@ -1,15 +1,23 @@
-/** Minimal in-game HUD: compass, biome, objective tracker, tool, prompts, notices. */
+/**
+ * In-game HUD: compass, objective tracker, minimap with biome and coordinates,
+ * tool bar, status and context badges, Quick View, prompts and notices.
+ */
 import { useEffect } from 'react';
-import { SLOWMO_PRESETS } from '../../config';
+import { LENS_TOOLS, SLOWMO_PRESETS } from '../../config';
+import { QUESTS } from '../../data/quests/quests';
 import { getSpecies, speciesText } from '../../data/species';
 import { input } from '../../engine/input/input';
-import { useLang, useT, useTd } from '../../i18n';
+import { useLang, useT, useTd, type TextKey } from '../../i18n';
 import { useGame } from '../../store/gameStore';
 import { runtime } from '../../store/runtime';
+import { COLLECTION_TOTALS, hasFreshItems } from '../../systems/collection/quickView';
 import { activeQuest, getProgress, objectiveDone } from '../../systems/quests/engine';
 import { bearingTo, headingDelta, headingFromYaw } from '../map/coords';
 import { getThumbnail } from '../journal/modelPreview';
 import { useTick } from '../useTick';
+import { TOOLBAR, activeToolbarEntry, contextBadges, formatClock, formatCoords, isDaytime, type ContextBadgeId, type ToolbarEntry } from './hudModel';
+import { Minimap } from './Minimap';
+import { QuickView } from './QuickView';
 
 const PX_PER_DEG = 3.2;
 const MARKS: [number, string, boolean][] = [];
@@ -49,18 +57,27 @@ function Compass(): React.JSX.Element {
 function Tracker(): React.JSX.Element {
   const t = useT();
   const quest = useGame((s) => s.quest);
+  const earned = useGame((s) => s.badges.length);
   const q = activeQuest(quest);
+  const head = (
+    <div className="label">
+      {t('hud.objective')}
+      <span className="mission-badges" data-testid="hud-mission-badges" data-earned={earned} title={t('hud.missionBadges')}>
+        ✦ {earned}/{QUESTS.length}
+      </span>
+    </div>
+  );
   if (!q) {
     return (
       <div className="tracker glass" data-testid="tracker">
-        <div className="label">{t('hud.objective')}</div>
+        {head}
         <h4>{t('hud.freeRoam')}</h4>
       </div>
     );
   }
   return (
     <div className="tracker glass" data-testid="tracker" data-quest={q.id}>
-      <div className="label">{t('hud.objective')}</div>
+      {head}
       <h4>{t(q.title)}</h4>
       <ul>
         {q.objectives.map((o) => {
@@ -132,6 +149,45 @@ function DiscoveryCard(): React.JSX.Element | null {
   );
 }
 
+const TOOLBAR_LABEL: Record<ToolbarEntry['id'], TextKey> = {
+  camera: 'toolbar.camera',
+  binoculars: 'toolbar.binoculars',
+  scanner: 'toolbar.scanner',
+  macro: 'toolbar.macro',
+  journal: 'toolbar.journal',
+  map: 'toolbar.map',
+};
+
+/** One HUD badge. Labels use the display face, figures the monospaced one. */
+function Badge(props: { id: string; tone?: 'rec' | 'accent'; testId?: string; title?: string; children: React.ReactNode; attrs?: Record<string, string | number> }): React.JSX.Element {
+  return (
+    <span className={`hud-badge glass ${props.tone ?? ''}`} data-badge={props.id} data-testid={props.testId} title={props.title} {...props.attrs}>
+      {props.children}
+    </span>
+  );
+}
+
+/** Bottom-left: every tool with its key, the one in use lit, and the name of what is in the hand. */
+function Toolbar({ tool, overlay }: { tool: string; overlay: string }): React.JSX.Element {
+  const t = useT();
+  const td = useTd();
+  const active = activeToolbarEntry(tool, overlay);
+  return (
+    <div className="toolbar glass" data-testid="toolbar" data-active={active ?? 'none'}>
+      <span className="tb-name" data-testid="hud-tool">
+        <b>{td(`tool.${tool}`)}</b>
+        <kbd>Tab</kbd>
+      </span>
+      {TOOLBAR.map((e) => (
+        <span key={e.id} className={`tb-item ${active === e.id ? 'on' : ''}`} data-entry={e.id} data-on={active === e.id}>
+          <kbd>{e.key}</kbd>
+          <span className="tb-label">{t(TOOLBAR_LABEL[e.id])}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function Hud(): React.JSX.Element | null {
   const t = useT();
   const td = useTd();
@@ -144,42 +200,77 @@ export function Hud(): React.JSX.Element | null {
   const slowmo = useGame((s) => s.slowmo);
   const recording = useGame((s) => s.recording);
   const showPerf = useGame((s) => s.settings.showPerf);
+  const minimapOn = useGame((s) => s.settings.minimap);
+  const viewMode = useGame((s) => s.viewMode);
   const waypoint = useGame((s) => s.waypoint);
   const discovered = useGame((s) => s.discovered);
+  const quickView = useGame((s) => s.quickView);
+  const fresh = useGame((s) => hasFreshItems(s, s.quickSeen));
   const p = runtime.player;
   const perf = runtime.perf;
   const target = runtime.target;
+  const held = runtime.held;
   const hidden = hudHidden && tool !== 'none';
-  // While looking through an instrument the viewport is kept clear.
+  // Looked-through tools keep the corners clear (no minimap, no Quick View).
+  const lensTool = (LENS_TOOLS as readonly string[]).includes(tool);
+  // While an instrument is up the viewport is kept clear of the tracker, tool bar and status badges.
   const lens = tool === 'camera' || tool === 'video' || tool === 'binoculars' || tool === 'scanner';
   const species = target ? getSpecies(target.speciesId) : undefined;
   const known = species && discovered[species.id];
+  const found = Object.keys(discovered).length;
+  const context = contextBadges({
+    recording,
+    slowmo,
+    underwater: runtime.camera.underwater,
+    swimming: p.swimming,
+    crouching: p.crouching,
+    sprinting: p.sprinting,
+    waypointDistance: waypoint ? Math.hypot(p.pos.x - waypoint[0], p.pos.z - waypoint[1]) : null,
+  });
+  const contextText: Record<ContextBadgeId, string> = {
+    rec: t('hud.rec'),
+    slowmo: t('hud.slowmo', { n: SLOWMO_PRESETS[slowmo] ?? 1 }),
+    underwater: t('hud.underwater'),
+    swimming: t('hud.swimming'),
+    crouching: t('hud.crouching'),
+    sprinting: t('hud.sprinting'),
+    waypoint: t('hud.waypoint', { n: waypoint ? Math.round(Math.hypot(p.pos.x - waypoint[0], p.pos.z - waypoint[1])) : 0 }),
+  };
+  const showMinimap = minimapOn && !hidden && !lensTool && overlay === 'none';
 
   return (
-    <div className="hud" data-testid="hud" data-biome={p.biome} data-tool={tool}>
+    <div className="hud" data-testid="hud" data-biome={p.biome} data-tool={tool} data-view={viewMode}>
       {runtime.camera.underwater && <div className="underwater-tint" />}
       {!hidden && (
         <>
           <Compass />
-          {!lens && (
-            <div className="biome" data-testid="hud-biome">
-              {td(`biome.${p.biome}`)}
-            </div>
-          )}
           {overlay === 'none' && !lens && <Tracker />}
-          {!lens && (
-            <div className="toolchip glass" data-testid="hud-tool">
-              <b>{td(`tool.${tool}`)}</b>
-              <span className="muted" style={{ color: '#b9c7b0' }}>
-                <kbd>Tab</kbd>
-              </span>
+          {!lens && <Toolbar tool={tool} overlay={overlay} />}
+          <div className="hud-status">
+            <div className="chips" data-testid="hud-context">
+              {context.map((id) => (
+                <Badge key={id} id={id} tone={id === 'rec' ? 'rec' : undefined}>
+                  {contextText[id]}
+                </Badge>
+              ))}
             </div>
-          )}
-          <div className="chips">
-            {recording && <div className="chip glass rec">{t('hud.rec')}</div>}
-            {slowmo > 0 && <div className="chip glass">{t('hud.slowmo', { n: SLOWMO_PRESETS[slowmo] ?? 1 })}</div>}
-            {runtime.camera.underwater ? <div className="chip glass">{t('hud.underwater')}</div> : p.swimming && <div className="chip glass">{t('hud.swimming')}</div>}
-            {waypoint && <div className="chip glass">{t('hud.waypoint', { n: Math.round(Math.hypot(p.pos.x - waypoint[0], p.pos.z - waypoint[1])) })}</div>}
+            {!lens && !quickView && (
+              <div className="badges" data-testid="hud-badges">
+                <Badge id="time">
+                  <i aria-hidden="true">{isDaytime(runtime.time.hour) ? '☀' : '☾'}</i>
+                  <span className="num">{formatClock(runtime.time.hour)}</span>
+                </Badge>
+                <Badge id="weather">{t(`settings.weather.${runtime.weather.state}`)}</Badge>
+                <Badge id="collection" tone="accent" testId="hud-collection" title={t('hud.collection')} attrs={{ 'data-count': found, 'data-new': fresh ? 1 : 0 }}>
+                  <i aria-hidden="true">❖</i>
+                  <span className="num">
+                    {found}/{COLLECTION_TOTALS.species}
+                  </span>
+                  {fresh && <span className="dot" data-testid="hud-collection-dot" />}
+                  <kbd>Q</kbd>
+                </Badge>
+              </div>
+            )}
           </div>
           {tool === 'none' && overlay === 'none' && <div className="crosshair" />}
           {tool === 'none' && overlay === 'none' && target && target.distance < 14 && (
@@ -196,13 +287,34 @@ export function Hud(): React.JSX.Element | null {
           {overlay === 'none' && !input.locked && !lens && <div className="hint glass">{input.fallbackLook ? t('hud.keyboardLook') : t('hud.clickToLook')}</div>}
         </>
       )}
-      <Notices />
+      {/* Top-right column: minimap, where the player is, then whatever is transient. */}
+      <div className="hud-right">
+        {showMinimap && <Minimap />}
+        {!hidden && !lens && (
+          <div className="biome" data-testid="hud-biome">
+            <span>{td(`biome.${p.biome}`)}</span>
+            <span className="coords" data-testid="hud-coords">
+              {formatCoords(p.pos.x, p.pos.z)}
+            </span>
+          </div>
+        )}
+        {showPerf && (
+          <div className="perf glass" data-testid="perf">
+            {`FPS        ${perf.fps.toFixed(0)}\nframe      ${perf.frameMs.toFixed(1)} ms\ndraw calls ${perf.calls}\ntriangles  ${(perf.triangles / 1000).toFixed(0)}k\nrender     ${perf.width}×${perf.height} (${Math.round(perf.renderScale * 100)}%)\nplants     ${perf.plants}\nanimals    ${perf.activeAgents}/${perf.agents}\nchunks     ${perf.chunks}\nGPU        ${perf.geometries} geo · ${perf.textures} tex`}
+          </div>
+        )}
+        {quickView && overlay === 'none' && !lensTool ? <QuickView /> : <Notices />}
+      </div>
       <DiscoveryCard />
-      {showPerf && (
-        <div className="perf glass" data-testid="perf" style={{ top: 124 }}>
-          {`FPS        ${perf.fps.toFixed(0)}\nframe      ${perf.frameMs.toFixed(1)} ms\ndraw calls ${perf.calls}\ntriangles  ${(perf.triangles / 1000).toFixed(0)}k\nrender     ${perf.width}×${perf.height} (${Math.round(perf.renderScale * 100)}%)\nplants     ${perf.plants}\nanimals    ${perf.activeAgents}/${perf.agents}\nchunks     ${perf.chunks}\nGPU        ${perf.geometries} geo · ${perf.textures} tex`}
-        </div>
-      )}
+      {/* What is in the hand, for tests and assistive tools; the prop itself is drawn in the 3D view. */}
+      <span
+        hidden
+        data-testid="held-item"
+        data-item={held.item ?? 'none'}
+        data-raise={held.raise.toFixed(2)}
+        data-at-eye={held.atEye}
+        data-view-model={runtime.viewModel.visible}
+      />
     </div>
   );
 }

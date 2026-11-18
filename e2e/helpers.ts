@@ -146,3 +146,41 @@ export async function frameStats(page: Page): Promise<{ width: number; height: n
       }),
   );
 }
+
+/**
+ * Captures a frame through the game's capture path and counts pixels in the colour of the
+ * hand-held scanner's lit screen (an unlit, saturated cyan that nothing in the world uses).
+ * `raw` asks for the frame exactly as displayed, hand-held items included (a debug option;
+ * photographs never use it).
+ */
+export async function scannerScreenPixels(page: Page, raw: boolean): Promise<{ pixels: number; hadViewModel: boolean; width: number; height: number }> {
+  return page.evaluate(
+    (raw) =>
+      new Promise((resolve, reject) => {
+        const rt = window.__WO__!.runtime;
+        rt.capture = {
+          width: 0,
+          height: 0,
+          raw,
+          reject,
+          resolve: (canvas: HTMLCanvasElement) => {
+            const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+            let pixels = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (data[i]! < 95 && data[i + 1]! > 228 && data[i + 2]! > 185) pixels++;
+            }
+            resolve({ pixels, hadViewModel: rt.viewModel.lastCaptureHadViewModel, width: canvas.width, height: canvas.height });
+          },
+        };
+      }),
+    raw,
+  );
+}
+
+/** What the researcher is holding, as the HUD reports it. */
+export async function heldItem(page: Page): Promise<{ item: string; raise: number; atEye: boolean; viewModel: boolean }> {
+  return page.evaluate(() => {
+    const wo = window.__WO__!;
+    return { item: wo.runtime.held.item ?? 'none', raise: wo.runtime.held.raise, atEye: wo.runtime.held.atEye, viewModel: wo.runtime.viewModel.visible };
+  });
+}

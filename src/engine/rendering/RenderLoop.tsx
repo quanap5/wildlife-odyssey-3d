@@ -14,6 +14,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { useGame } from '../../store/gameStore';
 import { runtime } from '../../store/runtime';
 import { APERTURES } from '../../config';
+import { copyIncludesViewModel, planFrame } from './framePlan';
 import { windUniforms } from './windMaterial';
 
 const _size = new Vector2();
@@ -123,54 +124,82 @@ export function RenderLoop(): null {
         gl.render(scene, camera);
       }
     };
+    // The frame is a short list of passes: the world, then the hand-held view model over it.
+    // A capture copies a frame that holds the world only (see framePlan.ts).
+    const vm = runtime.viewModel;
+    const drawViewModel = (): void => {
+      vm.render?.(gl);
+      vm.passes++;
+    };
+    const req = runtime.capture;
+    if (req) runtime.capture = null;
+    const sized = Boolean(req && req.width > 0 && req.height > 0);
+    const plan = planFrame(vm.visible && vm.render !== null, req ? { sized, raw: Boolean(req.raw) } : null);
     // Count every pass of the frame (the depth-of-field path renders the scene twice plus two full-screen passes).
     gl.info.autoReset = false;
     gl.info.reset();
-    draw();
-    runtime.perf.calls = gl.info.render.calls;
-    runtime.perf.triangles = gl.info.render.triangles;
-
-    const req = runtime.capture;
-    if (req) {
-      runtime.capture = null;
-      try {
-        const out = document.createElement('canvas');
-        const ctx = out.getContext('2d');
-        if (!ctx) throw new Error('2D canvas unavailable');
-        if (req.width <= 0 || req.height <= 0) {
-          out.width = gl.domElement.width;
-          out.height = gl.domElement.height;
-          ctx.drawImage(gl.domElement, 0, 0);
-        } else {
+    let out: HTMLCanvasElement | null = null;
+    let failure: Error | null = null;
+    let measured = false;
+    const measure = (): void => {
+      if (measured) return;
+      measured = true;
+      runtime.perf.calls = gl.info.render.calls;
+      runtime.perf.triangles = gl.info.render.triangles;
+    };
+    let restore: (() => void) | null = null;
+    try {
+      for (const pass of plan) {
+        if (pass === 'world') draw();
+        else if (pass === 'viewmodel') drawViewModel();
+        else if (pass === 'resize' && req) {
+          measure();
           // Re-render the scene at the requested resolution, then restore the view.
           gl.getSize(_size);
           const ratio = gl.getPixelRatio();
           const aspect = camera.aspect;
-          try {
-            gl.setPixelRatio(1);
-            gl.setSize(req.width, req.height, false);
-            post?.composer.setPixelRatio(1);
-            post?.composer.setSize(req.width, req.height);
-            camera.aspect = req.width / req.height;
-            camera.updateProjectionMatrix();
-            draw();
-            out.width = req.width;
-            out.height = req.height;
-            ctx.drawImage(gl.domElement, 0, 0, req.width, req.height);
-          } finally {
+          const w = _size.x;
+          const h = _size.y;
+          restore = () => {
             gl.setPixelRatio(ratio);
-            gl.setSize(_size.x, _size.y, false);
+            gl.setSize(w, h, false);
             post?.composer.setPixelRatio(ratio);
-            post?.composer.setSize(_size.x, _size.y);
+            post?.composer.setSize(w, h);
             camera.aspect = aspect;
             camera.updateProjectionMatrix();
-            draw();
-          }
+          };
+          gl.setPixelRatio(1);
+          gl.setSize(req.width, req.height, false);
+          post?.composer.setPixelRatio(1);
+          post?.composer.setSize(req.width, req.height);
+          camera.aspect = req.width / req.height;
+          camera.updateProjectionMatrix();
+        } else if (pass === 'copy' && req) {
+          measure();
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('2D canvas unavailable');
+          canvas.width = sized ? req.width : gl.domElement.width;
+          canvas.height = sized ? req.height : gl.domElement.height;
+          ctx.drawImage(gl.domElement, 0, 0, canvas.width, canvas.height);
+          out = canvas;
+        } else if (pass === 'restore') {
+          restore?.();
+          restore = null;
         }
-        req.resolve(out);
-      } catch (err) {
-        req.reject(err instanceof Error ? err : new Error(String(err)));
       }
+    } catch (err) {
+      failure = err instanceof Error ? err : new Error(String(err));
+      // Never leave the renderer at the capture size.
+      restore?.();
+    }
+    measure();
+    if (req) {
+      vm.lastCaptureHadViewModel = copyIncludesViewModel(plan);
+      if (out && !failure) req.resolve(out);
+      else req.reject(failure ?? new Error('capture produced no image'));
+    } else if (failure) {
+      throw failure;
     }
 
     if (stats.tick(rawDt)) {

@@ -1,5 +1,5 @@
 /** Field journal: species, photographs, videos, map, progress and field notes. */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PHOTO } from '../../config';
 import { QUESTS } from '../../data/quests/quests';
 import { SPECIES, getSpecies, speciesText } from '../../data/species';
@@ -12,6 +12,7 @@ import { deleteVideo, extensionFor, loadVideo } from '../../systems/video/record
 import { INTERACTABLES, type Interactable } from '../../world/structures/structures';
 import { LANDMARKS } from '../../world/terrain/layout';
 import { MapView } from '../map/MapView';
+import { useObjectUrl } from '../useObjectUrl';
 import { Confirm, Panel } from '../menus/Panel';
 import { Encyclopedia } from './Encyclopedia';
 
@@ -23,31 +24,6 @@ const TABS: { id: JournalTab; label: 'journal.encyclopedia' | 'journal.album' | 
   { id: 'progress', label: 'journal.progress' },
   { id: 'notes', label: 'journal.notes' },
 ];
-
-/** Loads a blob from storage and exposes an object URL for it. */
-function useObjectUrl(load: () => Promise<Blob | null>, key: string): { url: string | null; missing: boolean; blob: Blob | null } {
-  const [state, setState] = useState<{ url: string | null; missing: boolean; blob: Blob | null }>({ url: null, missing: false, blob: null });
-  useEffect(() => {
-    let alive = true;
-    let url: string | null = null;
-    setState({ url: null, missing: false, blob: null });
-    load()
-      .then((blob) => {
-        if (!alive) return;
-        if (!blob) return setState({ url: null, missing: true, blob: null });
-        url = URL.createObjectURL(blob);
-        setState({ url, missing: false, blob });
-      })
-      .catch(() => alive && setState({ url: null, missing: true, blob: null }));
-    return () => {
-      alive = false;
-      if (url) URL.revokeObjectURL(url);
-    };
-    // `load` is recreated every render; the key identifies the media item.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  return state;
-}
 
 function PhotoThumb({ photo, onOpen }: { photo: PhotoMeta; onOpen: () => void }): React.JSX.Element {
   const lang = useLang();

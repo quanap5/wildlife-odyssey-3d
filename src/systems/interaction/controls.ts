@@ -3,7 +3,7 @@
  * actions. Continuous input (WASD, look, wheel) is polled by the player
  * controller instead.
  */
-import { APERTURES, GRID_MODES, PHOTO, SLOWMO_PRESETS, ZOOM_PRESETS } from '../../config';
+import { APERTURES, GRID_MODES, LENS_TOOLS, PHOTO, SLOWMO_PRESETS, ZOOM_PRESETS } from '../../config';
 import { audio } from '../../engine/audio/audio';
 import { input } from '../../engine/input/input';
 import { useGame, type Overlay, type Tool } from '../../store/gameStore';
@@ -32,6 +32,48 @@ function toggleOverlay(overlay: Overlay): void {
     audio.page();
     input.releaseLock();
   }
+}
+
+/** Time the map or journal takes to come up into the hand before its panel opens (ms). */
+export const RAISE_BEFORE_OPEN_MS = 220;
+let pendingOpen: { overlay: Overlay; timer: ReturnType<typeof setTimeout> } | null = null;
+
+function cancelPendingOpen(): void {
+  if (!pendingOpen) return;
+  clearTimeout(pendingOpen.timer);
+  pendingOpen = null;
+}
+
+/**
+ * Map and journal: the researcher lifts the item first, then the panel opens.
+ * Pressing the key again before it opens puts the item away.
+ */
+function raiseThenToggle(overlay: 'map' | 'journal'): void {
+  const st = useGame.getState();
+  if (pendingOpen) {
+    const same = pendingOpen.overlay === overlay;
+    cancelPendingOpen();
+    runtime.held.flash = null;
+    if (same) return;
+  }
+  if (st.overlay !== 'none' || !st.settings.heldItems) {
+    toggleOverlay(overlay);
+    return;
+  }
+  runtime.held.flash = overlay;
+  runtime.held.flashUntil = performance.now() + RAISE_BEFORE_OPEN_MS + 400;
+  const timer = setTimeout(() => {
+    pendingOpen = null;
+    const now = useGame.getState();
+    if (now.screen === 'playing' && now.overlay === 'none') toggleOverlay(overlay);
+    else runtime.held.flash = null;
+  }, RAISE_BEFORE_OPEN_MS);
+  pendingOpen = { overlay, timer };
+}
+
+/** Quick View can be opened while walking, but not through a lens or over a panel. */
+export function quickViewAllowed(tool: Tool, overlay: Overlay): boolean {
+  return overlay === 'none' && !(LENS_TOOLS as readonly string[]).includes(tool);
 }
 
 export function closeOverlay(): void {
@@ -75,7 +117,20 @@ export function installControls(getCanvas: () => HTMLCanvasElement | null): () =
     audio.start();
     const overlay = st.overlay;
 
+    if (code === 'KeyQ') {
+      if (quickViewAllowed(st.tool, overlay)) st.setQuickView(true);
+      return true;
+    }
+    if (code === 'KeyQ:up') {
+      st.setQuickView(false);
+      return true;
+    }
     if (code === 'Escape') {
+      if (pendingOpen) {
+        cancelPendingOpen();
+        runtime.held.flash = null;
+        return true;
+      }
       if (overlay !== 'none') closeOverlay();
       else if (st.tool !== 'none') selectTool('none');
       else toggleOverlay('pause');
@@ -85,8 +140,8 @@ export function installControls(getCanvas: () => HTMLCanvasElement | null): () =
       st.setSetting('showPerf', !st.settings.showPerf);
       return true;
     }
-    if (code === 'KeyJ') return toggleOverlay('journal'), true;
-    if (code === 'KeyM') return toggleOverlay('map'), true;
+    if (code === 'KeyJ') return raiseThenToggle('journal'), true;
+    if (code === 'KeyM') return raiseThenToggle('map'), true;
     if (code === 'KeyI') return toggleOverlay('inventory'), true;
     if (code === 'Tab') {
       if (overlay === 'none') {
@@ -135,6 +190,9 @@ export function installControls(getCanvas: () => HTMLCanvasElement | null): () =
         st.notify(next === 'first' ? 'notify.perspective.first' : 'notify.perspective.third');
         return true;
       }
+      case 'KeyN':
+        if (st.settings.minimap) st.cycleMinimapZoom();
+        return true;
       case 'KeyZ':
         setSlowmo(st.slowmo + 1);
         return true;
@@ -184,6 +242,7 @@ export function installControls(getCanvas: () => HTMLCanvasElement | null): () =
   });
 
   return () => {
+    cancelPendingOpen();
     unsubscribe();
     unwatch();
     input.onPrimary = null;

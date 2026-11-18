@@ -35,6 +35,8 @@ export interface CaptureRequest {
   height: number;
   resolve: (canvas: HTMLCanvasElement) => void;
   reject: (err: Error) => void;
+  /** Debug only: copy the frame exactly as displayed, hand-held items included. Photographs never set this. */
+  raw?: boolean;
 }
 
 export const runtime = {
@@ -64,6 +66,8 @@ export const runtime = {
     /** Camera rotation speed (rad/s), feeds motion blur scoring. */
     angularSpeed: 0,
     underwater: false,
+    /** 0 = first person, 1 = fully third person (eased during the switch). */
+    third: 0,
   },
   time: {
     real: 0,
@@ -94,6 +98,27 @@ export const runtime = {
     /** speciesId -> seconds in the reticle during this recording. */
     species: new Map<string, number>(),
     behaviors: new Map<string, Set<Behavior>>(),
+  },
+  /** What the researcher is holding. Written by the player controller, read by the view model and the avatar. */
+  held: {
+    /** Item currently in the hand (it stays here while being lowered). */
+    item: null as string | null,
+    /** 0 = put away, 1 = fully raised. */
+    raise: 0,
+    /** A lens tool that has reached the eye: the lens view has taken over and nothing is drawn. */
+    atEye: false,
+    /** Item briefly shown by an action (map and journal being raised, a specimen being inspected). */
+    flash: null as string | null,
+    flashUntil: 0,
+  },
+  /** First-person hand-held pass. `render` is installed by the view model component. */
+  viewModel: {
+    visible: false,
+    render: null as ((gl: unknown) => void) | null,
+    /** Number of view-model passes drawn since start. */
+    passes: 0,
+    /** True if the last capture copied a frame that still had the view model on it (only possible with `raw`). */
+    lastCaptureHadViewModel: false,
   },
   capture: null as CaptureRequest | null,
   perf: { fps: 60, frameMs: 16, calls: 0, triangles: 0, renderScale: 1, agents: 0, activeAgents: 0, plants: 0, chunks: 0, width: 0, height: 0, geometries: 0, textures: 0, programs: 0 },
