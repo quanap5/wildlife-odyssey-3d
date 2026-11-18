@@ -34,7 +34,7 @@ npm run test:e2e   # Playwright, runs against `npm run preview` in system Chrome
 npm run check      # lint + typecheck + unit tests + build
 ```
 
-`npm run build` must have been run before `npm run test:e2e`. The browser tests use software WebGL (SwiftShader) so they work without a GPU; on such machines the three tests take about 15 minutes in total.
+`npm run build` must have been run before `npm run test:e2e`. The browser tests use software WebGL (SwiftShader) so they work without a GPU; on such machines the four tests take about 15 minutes in total.
 
 ## Controls
 
@@ -51,13 +51,15 @@ npm run check      # lint + typecheck + unit tests + build
 | B | Binoculars |
 | X | Macro lens |
 | Z | Slow motion 1.0 / 0.5 / 0.25x |
-| V | First / third person |
+| V | First person / over-the-shoulder third person (lens tools always use first person) |
+| N | Minimap zoom: near, medium, far |
+| Q (hold) | Quick View of everything collected so far; release to close |
 | M | Map (click to set a waypoint) |
 | J | Field journal |
 | I | Inventory |
 | Tab | Equipment wheel |
 | F3 | Performance overlay |
-| Esc | Pause and settings |
+| Esc | Pause and settings (minimap on/off, orientation and size; hand-held items on/off) |
 
 If the browser refuses pointer capture (for example inside a sandboxed frame), drag with the mouse or use the arrow keys to look.
 
@@ -78,6 +80,7 @@ src/
   tests/        unit tests (Vitest)
 e2e/            browser tests (Playwright)
 qa/harness/     exploratory QA scripts behind docs/qa-report.md
+qa/quickview-layout.mjs  HUD and Quick View layout check at four window sizes, both languages
 scripts/        maintenance scripts
 docs/           design, architecture, status, QA report, handbook, prompts
 public/         files copied as-is into the build (font licence)

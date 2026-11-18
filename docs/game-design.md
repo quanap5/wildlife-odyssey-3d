@@ -57,6 +57,14 @@ Both can do everything.
 
 Photo score weights: visibility 22, subject size 20, composition 14, sharpness 12, focus 12, lighting 12, distance 8. A subject mostly hidden (under 50 % visible) or very small in frame (under about 13 % of frame height) scales the whole score down, so a distant speck never rates as good. A score of 70+ is "high quality" and unlocks the species' field notes.
 
+## HUD, views and Quick View
+
+- **Minimap** (top right): circular, heading-up or north-up, three zoom levels on N (60, 120 and 240 m radius), three sizes. Shows the player, explored ground, discovered landmarks and the waypoint, which is pinned to the rim when it is off the map. Hidden through a lens, under any panel and when the HUD is hidden. M still opens the full map.
+- **Views**: V switches between first person and an over-the-shoulder camera that is pushed in by ground, trunks and walls. Camera, video, binoculars and macro lens always look through first person, then return the view the player had.
+- **In the hand**: the active tool is held. Lens tools are raised to the eye and the lens view takes over; the scanner stays in the hand; the map and the journal are raised before their panel opens; inspecting a specimen shows the tray. Props are never recorded in photographs or video.
+- **Badges**: tool bar bottom left; time, weather and the collection count bottom right, with a dot when something new was collected; biome and coordinates under the minimap; earned mission badges on the tracker; context badges for recording, slow motion, swimming, crouching, sprinting and waypoint distance.
+- **Quick View**: hold Q for the seven collections (species, photographs, video clips, artifacts, field notes, landmarks, mission badges) with counts, the newest items and what is new since the last look. An empty collection says how to start it. The game keeps running and the player can keep walking; not available through a lens.
+
 ## Expeditions
 
 1. **First Steps into the Wild** — leave camp, walk 40 m, find an animal, binoculars, photograph, scan, open journal, read an entry.

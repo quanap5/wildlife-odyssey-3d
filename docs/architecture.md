@@ -51,6 +51,14 @@ e2e/                     Playwright browser tests
 - `world/weather/Ambience.tsx` draws pollen, falling leaves and fireflies as one `Points` object animated entirely in the vertex shader.
 - Quality selects geometry as well as settings: the Low preset builds solid canopies and untextured blades (`getPlantGeometry(id, low, simpleFoliage)`), uses a material with no atlas, and the lite terrain path.
 
+## HUD, view model and minimap
+
+- `engine/rendering/framePlan.ts` (pure) decides the passes of a frame. The hand-held view model (`entities/player/ViewModel.tsx`) is drawn last, after the depth buffer is cleared, with its own fixed field of view. A capture redraws the world without it first, so photographs, video frames, the depth-of-field pass and the photo score never see a prop.
+- `entities/player/heldItems.ts` builds the props with `GeoBuilder` and maps tool and action to what is held (pure). `engine/camera/boom.ts` is the third-person boom length against ground and obstacles (pure).
+- `ui/map/baseMap.ts` paints the relief image once; the full map and `ui/hud/Minimap.tsx` both draw from it. `ui/map/minimap.ts` holds the projection, rim clamping and zoom maths (pure). The minimap redraws on the 10 Hz UI tick, never per frame, and adds no camera or render pass.
+- `systems/collection/quickView.ts` (pure) derives the Quick View rows from the store and what was seen at the last look; nothing new is saved. `ui/hud/hudModel.ts` (pure) formats badges, clock and coordinates.
+- Layout: the top-right column (`.hud-right`) is capped at the window height and the Quick View panel is its only flexible item, so the panel shrinks before anything leaves the window.
+
 ## Principles applied
 
 - **Rendering is separate from gameplay state.** Per-frame simulation state lives in the plain `runtime` object; React components sample it at 10 Hz. Zustand holds what the UI renders and what is saved. The frame loop never triggers React renders.

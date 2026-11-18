@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 13 Nov 2026.
+Last updated: 18 Nov 2026 (branch `feature/hud-minimap-held-items`; `main` is still 0.1.0 as of 13 Nov).
 
 ## Status words
 
@@ -16,19 +16,20 @@ Nothing below is marked Verified on the strength of reading the code.
 
 ## Current phase
 
-Phase 8 (optimisation and release), followed by an art-direction pass over rendering and interface. All eight phases have working code. The full 30-step acceptance scenario passes in the browser on the art-pass build. What remains is verification that needs hardware this environment does not have (a GPU, speakers, other browsers) and content depth (species source checks).
+Phase 8 (optimisation and release), followed by an art-direction pass over rendering and interface. All eight phases have working code. The full 30-step acceptance scenario passes in the browser on the art-pass build. A ninth pass added the minimap, the over-the-shoulder camera, hand-held tools, HUD badges and Quick View; it is complete on its branch and all four browser tests pass there. What remains is verification that needs hardware this environment does not have (a GPU, speakers, other browsers) and content depth (species source checks).
 
 ## Latest test results
 
-Run on the final build, 13 Nov 2026 (after the typeface change).
+Run on the feature branch build, 18 Nov 2026 (after the Quick View layout fix).
 
 | Check | Command | Result |
 |---|---|---|
 | Lint | `npm run lint` | clean |
 | Types | `npm run typecheck` (strict) | clean |
-| Unit tests | `npm run test` | **152 passed**, 11 files |
+| Unit tests | `npm run test` | **192 passed**, 12 files |
 | Production build | `npm run build` | succeeds; `dist/` 6.2 MB (includes 227 kB of bundled fonts) |
-| Browser tests | `npm run test:e2e` | **3 passed** in 12.4 min on the final build |
+| Browser tests | `npm run test:e2e` | **4 passed** in 13.9 min on the branch build |
+| HUD and Quick View layout | `node qa/quickview-layout.mjs` | 32 checks pass: English and Vietnamese, empty and full collections, at 960 x 540, 1280 x 720, 1920 x 1080 and 800 x 450. At 800 x 450 (below the design size) the panel stays inside the window but its list is cut short |
 | Independent QA pass | scripted play-through in real Chrome, `docs/qa-report.md` | **110 checks**: 109 pass, 1 not applicable; 4 defects found and fixed. Run on 11 Nov 2026, before the typeface change, and not repeated since |
 | Typeface check | scripted Chrome run at 1280 x 720, Vietnamese | 16 checks pass: families per role, Vietnamese and italic faces loaded, no clipped text, no failed requests |
 
@@ -36,6 +37,7 @@ Browser tests ran in headless Chrome with software WebGL (SwiftShader, about 1 f
 
 1. **Main menu** — loads; the canvas holds a real rendered scene (not blank or flat); all five menu entries; Continue disabled without a save; Vietnamese and English; field guide lists 36 species and keeps the open page across a language switch; settings persist; credits.
 2. **Acceptance scenario** — steps 1-30 of the brief, in order, in one session (details in the table below).
+4. **HUD and hands** — minimap in the corner following the player; N zoom; badges and tool bar inside the window and clear of the centre; scanner in the hand on screen but absent from a captured frame; scan; camera raised to the eye; every tool; Quick View under the minimap, inside the window and not cut off, with the scanned species and the new photograph marked new, while the player keeps walking; view switching; minimap and hand-held settings.
 3. **Tools, interactions and environment** — archaeologist role; slow motion measured on the simulation clock at 1.0 / 0.5 / 0.25x; third person; performance overlay; jump; reading a sign with E; scanning a plant, which raises the discovery card; camera guides (G) and aperture (- =); macro lens; rain and night from the pause menu (frame measurably darker); Vietnamese HUD in game; save, return to menu, reset progress.
 
 Unit test files: `species` (schema, lookup, wiring), `quests` (state transitions), `photography` (scoring, zoom, adaptive resolution, codec choice), `i18n` (key parity, anatomy notes), `persistence` (serialisation, migration, corrupt saves, media storage), `store` (discovery tracking, save round trip), `behavior` (state transitions for every controller), `world` (terrain, chunk streaming, placement, map coordinates, day/night and weather), `simulation` (wildlife system, targeting and occlusion, Rapier controller), `rendering` (atlas layout, card geometry, plant model variants, camera settings).
@@ -100,6 +102,18 @@ Unit test files: `species` (schema, lookup, wiring), `quests` (state transitions
 | Low preset: solid canopies, untextured ground cover, lite terrain | Verified (browser) indirectly: the whole suite runs on it | One screenshot |
 | Bundled typefaces: Chakra Petch (titles, HUD labels, scientific names), Be Vietnam Pro (body), JetBrains Mono (readouts); Latin and Vietnamese subsets, OFL 1.1 | Verified (browser) for loading and use; look: Implemented | A scripted Chrome check (13 Nov 2026) confirmed each role resolves to the bundled family, the Vietnamese and italic faces load from the build with no failed request, and no text is clipped in the menu, field guide (both languages), HUD or journal at 1280 x 720. Appearance was judged from five screenshots in Vietnamese; English was checked for clipping only, and the settings, map, video and pause screens were not looked at with the new fonts |
 | External glTF models and PBR texture packs | Not started | Not reachable or licence-checkable from the build environment; see `docs/asset-licenses.md` |
+
+### HUD, views and hand-held tools (branch)
+
+| Feature | Status | Evidence / note |
+|---|---|---|
+| Minimap: corner position, follows the player, three zoom levels, heading-up / north-up, three sizes, on/off | Verified (browser) | Projection, rim clamping and zoom: Verified (unit). Landmark and waypoint markers were not asserted in the browser |
+| Over-the-shoulder camera, 0.25 s switch, lens tools borrow first person, view saved | Verified (browser) for switching and saving | Boom against ground, trunks and walls: Verified (unit); not watched in motion |
+| Hand-held props in first person (separate pass) and on the avatar in third person | Verified (browser) for what is held and when | Looked at in screenshots on the Low preset only; sway and bob not watched in motion |
+| Props never in a captured frame | Verified (browser) + (unit) | A displayed frame holds the scanner's lit screen; a captured frame of the same view holds none of it |
+| HUD tool bar, clock, weather, collection badge and dot, context badges, mission-badge count, biome and coordinates | Verified (browser) at 960 x 540 in English | Position inside the window in both languages at four sizes: layout script. Recording, swimming and waypoint badges: Verified (unit) only |
+| Quick View (hold Q): seven collections, counts, newest items, new marks, hints for empty collections, no pause | Verified (browser) | Layout in both languages and four sizes: layout script, with sample data placed in the store for the full case |
+| Held items off; simplified props on Low | Off: Verified (browser). Low props: Implemented | |
 
 ### Player
 
@@ -187,11 +201,15 @@ This strengthens several rows above: sprint and crouch, photo output sizes, miss
 - Compass letters (N, E, S, W) are not translated.
 - The physics chunk is 4.3 MB because Rapier's WASM is inlined.
 - On a very slow machine the scanner and focus lock take longer than designed, because simulation steps are clamped.
+- **The HUD pass has been seen only on the Low preset, in stills.** Hand-held props on Medium and High, their sway and bob, and the third-person camera in motion have not been looked at.
+- Below 960 x 540 the Quick View list is cut short instead of leaving the window.
 - No touch or gamepad controls; desktop keyboard and mouse only.
 - When the game is embedded in a sandboxed frame, pointer capture, file download and persistent storage can each be refused by the host. The game then falls back to drag-to-look and in-memory saves (with a notice on the menu) and replaces the download buttons with a note. This was checked once by hand-run script in a frame sandboxed to scripts only: menu, new expedition, Rapier physics, a photo and the album all worked; nothing persisted, as expected.
 
 ## Bugs found by the browser tests and fixed
 
+- (HUD pass) Quick View ran past the bottom of a 960 x 540 window (bottom edge at 606 px); it now ends at 478 px with empty collections in Vietnamese and 520 px with every collection filled.
+- (HUD pass) The "click to look around" hint showed through the Quick View panel.
 - Cursor could stay captured when a panel was opened right after closing another, making the panel unclickable.
 - Video review: the clip could cover the speed and save buttons at small window sizes.
 - Map clicks were offset when the map was letterboxed.
@@ -209,4 +227,5 @@ This strengthens several rows above: sprint and crouch, photo output sizes, miss
 3. Verify the remaining 26 species against primary sources and update `verification.json`.
 4. Play missions 2-5 to completion in the browser and add them to the suite.
 5. Test in Firefox and Safari.
-6. Content depth: enclosed cave, more animal animation variety, localised compass.
+6. Merge `feature/hud-minimap-held-items` into `main` and tag 0.2.0.
+7. Content depth: enclosed cave, more animal animation variety, localised compass.

@@ -770,6 +770,12 @@ test.describe('Wildlife Odyssey 3D', () => {
       expect(q.y).toBeGreaterThanOrEqual(m.y + m.height);
       expect(q.x).toBeGreaterThan(viewport.width / 2);
       expect(q.y + q.height).toBeLessThanOrEqual(viewport.height);
+      // ... and nothing in it is cut off to make it fit.
+      const clipped = await quick.evaluate((el) => {
+        const list = el.querySelector('ul')!;
+        return el.scrollHeight > el.clientHeight + 1 || list.scrollHeight > list.clientHeight + 1;
+      });
+      expect(clipped).toBe(false);
       // The scanned species and the new photograph are there, marked new.
       await expect(page.getByTestId('quick-row-species')).toHaveAttribute('data-count', '1');
       await expect(page.getByTestId('quick-row-species')).toHaveAttribute('data-new', '1');

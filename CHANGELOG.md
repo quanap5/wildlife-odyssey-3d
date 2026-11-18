@@ -4,10 +4,18 @@ Dates are 2026. What was verified, and how, is recorded per feature in `docs/imp
 
 ## Unreleased
 
-On the `feature/hud-minimap-held-items` branch, not on `main`:
+On the `feature/hud-minimap-held-items` branch, not on `main`.
 
-- Corner minimap (N cycles zoom), over-the-shoulder third-person camera, hand-held research tools, HUD badges and tool bar, Quick View of collected items (hold Q).
-- State: implemented; lint, typecheck and unit tests pass on the branch. The new browser test does not pass yet, the existing browser suite has not been re-run against it, and the documentation has not been updated. See the branch's commit message.
+### HUD, minimap and hand-held tools (13-18 Nov)
+
+- Corner minimap drawn on a 2D canvas from the full map's relief image: player arrow, explored area, landmarks, waypoint; N cycles three zoom levels; heading-up or north-up; size and on/off in settings.
+- Over-the-shoulder third-person camera with ground, trunk and wall checks and a 0.25 s switch. Lens tools borrow first person and hand the view back. The chosen view is saved.
+- Hand-held props (binoculars, camera, scanner, macro lens, map, journal, specimen tray), drawn in first person as a separate pass and carried by the avatar in third person. They are never in a photograph or a recording.
+- HUD: tool bar, clock, weather, collection badge, context badges, mission-badge count, biome and coordinates under the minimap.
+- Quick View: hold Q for a glance at everything collected, without pausing.
+- Fix (18 Nov): Quick View ran past the bottom of a 960 x 540 window. Rows without pictures now share one line, the panel is wider, and the panel is the part of the right-hand column that gives way, so it cannot leave the window at any size.
+- Fix (18 Nov): the "click to look around" hint showed through the Quick View panel.
+- Tests: 192 unit tests (40 new); a fourth browser test, "HUD and hands"; `qa/quickview-layout.mjs`. Results are in `docs/implementation-status.md`.
 
 ## 0.1.0 — 13 Nov
 

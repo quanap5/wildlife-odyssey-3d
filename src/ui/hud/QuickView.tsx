@@ -53,6 +53,8 @@ function Row({ row }: { row: QuickRow }): React.JSX.Element {
   const fresh = new Set(row.fresh);
   let detail: React.ReactNode;
   let extra: string | null = null;
+  // Portraits and thumbnails get a line of their own; every other row stays on one line where it fits.
+  const media = !row.empty && (row.kind === 'species' || row.kind === 'photos');
 
   if (row.empty) {
     detail = <span className="qv-hint">{t(HINT[row.kind])}</span>;
@@ -101,7 +103,7 @@ function Row({ row }: { row: QuickRow }): React.JSX.Element {
   }
 
   return (
-    <li className={`qv-row ${row.empty ? 'none' : ''}`} data-testid={`quick-row-${row.kind}`} data-count={row.count} data-new={row.fresh.length}>
+    <li className={`qv-row ${row.empty ? 'none' : ''} ${media ? 'media' : 'line'}`} data-testid={`quick-row-${row.kind}`} data-count={row.count} data-new={row.fresh.length}>
       <span className="qv-icon" aria-hidden="true">
         {ICON[row.kind]}
       </span>

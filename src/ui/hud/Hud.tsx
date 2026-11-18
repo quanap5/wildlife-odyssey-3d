@@ -284,7 +284,7 @@ export function Hud(): React.JSX.Element | null {
               {prompt}
             </div>
           )}
-          {overlay === 'none' && !input.locked && !lens && <div className="hint glass">{input.fallbackLook ? t('hud.keyboardLook') : t('hud.clickToLook')}</div>}
+          {overlay === 'none' && !input.locked && !lens && !quickView && <div className="hint glass">{input.fallbackLook ? t('hud.keyboardLook') : t('hud.clickToLook')}</div>}
         </>
       )}
       {/* Top-right column: minimap, where the player is, then whatever is transient. */}
