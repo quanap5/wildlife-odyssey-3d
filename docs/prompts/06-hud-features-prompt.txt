@@ -1,0 +1,125 @@
+You are now acting as Gameplay UI Engineer and Technical Artist for Wildlife Odyssey 3D
+(React 19, TypeScript strict, Three.js, React Three Fiber, Zustand, Vite).
+Add five connected features to the existing playable game: a minimap, an improved
+first/third-person view system, hand-held research tools, a HUD badge system, and a
+Quick View of everything the player has collected.
+
+STEP 0 - RESEARCH BEFORE CODING
+Read these files and write a short plan before changing anything:
+- src/store/gameStore.ts (Tool, ViewMode, Overlay, Settings, discovered, photos, videos,
+  artifacts, notes, badges, landmarks)
+- src/systems/interaction/controls.ts and src/engine/input/input.ts (key bindings, GAME_KEYS)
+- src/entities/player/Player.tsx (first/third-person camera, the "researcher" avatar group)
+- src/engine/rendering/RenderLoop.tsx (manual render, depth-of-field pass, photo capture)
+- src/ui/hud/Hud.tsx, src/ui/camera/ToolOverlay.tsx, src/ui/journal/Journal.tsx, src/styles.css
+- src/ui/map/MapView.tsx and src/ui/map/coords.ts (cached base map, fog, landmarks, waypoint)
+- src/systems/persistence/ (how photo and video thumbnails are stored and read)
+- src/engine/rendering/geoBuilder.ts and src/entities/wildlife/models.ts (procedural modelling style)
+State which existing code each feature will reuse.
+
+FEATURE 1 - MINIMAP (top-right corner)
+- Circular or rounded-square minimap fixed in the top-right corner of the HUD. Move the
+  performance overlay below it.
+- Draw it on a 2D canvas from the cached base map in MapView.tsx. Do not add a second
+  3D camera or render pass for it.
+- Show: player arrow with heading, explored/unexplored fog, discovered landmarks,
+  the waypoint (clamped to the rim with a direction marker when off-map), north marker.
+- Key N cycles three zoom levels (near, medium, far) and shows the current level briefly.
+- Two modes: rotating (player-up) and north-up. The settings screen has on/off, mode
+  and size.
+- Redraw at most 10 times per second via useTick; never per frame.
+- Hidden while a lens tool is active (camera, video, binoculars, macro), while any
+  overlay is open, and when the HUD is hidden with H.
+- M still opens the full map.
+
+FEATURE 2 - VIEW SYSTEM
+- Keep V as the toggle and keep viewMode in the store. Add an over-the-shoulder
+  third-person camera with terrain and structure collision so it never clips through
+  the ground, trunks or walls, and a smooth 0.25 s transition between views.
+- Lens tools still force first person. On leaving the tool, return to the view the
+  player had before.
+- Scanner, map, journal and bare hands must work in both views.
+- Persist the chosen view in settings.
+
+FEATURE 3 - HAND-HELD RESEARCH TOOLS
+- Build low-poly procedural props with GeoBuilder, matching the existing art style.
+  No external model files. Props: binoculars, camera, bio scanner (with a lit screen),
+  macro lens, folded paper map, field journal, specimen tray/vial.
+- Mapping: binoculars/camera/video/macro show the prop being raised to the eye for
+  about 0.2 s, then the existing lens view takes over, and the prop lowers again on exit.
+  Scanner stays in hand while scanning. Opening the map (M) or journal (J) raises the
+  map or journal before the panel opens. Inspecting a plant, rock, track or artifact
+  with E shows the specimen tray.
+- First person: render props as a view model attached to the camera, in a separate
+  pass after clearing depth, with its own fixed field of view, so props never clip into
+  the world and are not affected by zoom. Add idle sway, walk bob and a short
+  equip/unequip animation; no sway when the player stands still for precise aiming.
+- Third person: attach the same prop to the avatar's hand with a matching arm pose.
+- The view model must never appear in photographs, recorded video, the depth-of-field
+  pass or the photo-score calculation. Prove this with a test.
+- Low preset: simplified props, no extra lights. Setting to turn held items off.
+
+FEATURE 4 - HUD BADGES
+- Replace the loose chips with one badge component and a consistent layout:
+  bottom-left: tool bar showing each tool with its key, the active one highlighted;
+  bottom-right: time of day, weather, and a collection badge (species found / 36,
+  with a small dot when something new was collected since Quick View was last opened);
+  under the minimap: biome name and map coordinates;
+  top-left: keep the mission tracker, add a compact badge for earned mission badges;
+  contextual badges: recording, slow motion, swimming/underwater, crouching, sprinting,
+  waypoint distance.
+- Badges use the existing fonts by role: Chakra Petch (--display) for labels,
+  JetBrains Mono (--mono) for numbers with tabular figures, Be Vietnam Pro (--sans) for text.
+- Glass style matching the current HUD. Nothing may cover the centre of the screen,
+  the compass or the interaction prompt. Must not overflow at 1280x720 or 960x540,
+  in Vietnamese or English.
+
+FEATURE 5 - QUICK VIEW OF COLLECTED ITEMS
+- Hold Q to peek at a Quick View panel; release to close. It must not pause the game,
+  release the pointer lock or need the mouse. The player can keep walking while it is open.
+- Place it on the right side under the minimap, sliding in within 0.15 s. It must not
+  cover the centre of the screen.
+- One row per collection, each with an icon, a count and the most recent items:
+  species discovered (found / 36, last five portraits with names),
+  photographs (count, best score, last three thumbnails),
+  videos (count, last recorded subject),
+  artifacts, field notes, landmarks found, and mission badges earned (earned / 5).
+- Mark items collected since the panel was last opened as new, and clear the mark when
+  the panel closes. Keep this marker in session state only; do not change the save format.
+- Read everything from the existing store. Reuse stored thumbnails and species
+  portraits; never load full-size photos or video for this panel. Cache object URLs and
+  revoke them when the panel unmounts.
+- Empty collections show a short hint on how to earn the first item, not a blank row.
+- The panel footer shows "J: open journal". The inventory (I) and journal (J) keep
+  working as before; Quick View is a glance, not a replacement.
+- Disabled while a lens tool is active or any overlay is open.
+
+CONSTRAINTS
+- Do not replace working game features with static visual demonstrations.
+- Preserve all existing gameplay systems, species data, save files, and controls.
+- Keep every existing data-testid (hud, compass, tracker, hud-biome, hud-tool, prompt,
+  target-label, notices, discovery-card, perf). Add new ones: minimap, held-item,
+  hud-badges, toolbar, quick-view.
+- Every new string goes in both src/i18n/vi.ts and src/i18n/en.ts with identical keys.
+- New keys (N, Q) must not collide with existing bindings. Check GAME_KEYS first, add
+  them there, and add them to the help text and README controls list.
+- No per-frame React state updates; per-frame data stays in store/runtime.ts.
+- Old saves must still load. Bump SAVE_VERSION and add a migration only if save data changes.
+- Bundle size and draw calls: report the before/after numbers.
+
+TESTING AND REPORTING
+- Unit tests: minimap coordinate transform in both modes and all zoom levels, waypoint
+  rim clamping, tool-to-prop mapping, badge data selectors, Quick View selectors
+  (counts, most-recent ordering, new markers, empty states), settings migration.
+- Extend e2e/game.spec.ts: minimap present in the top-right and updates when the player
+  moves; N cycles zoom; V switches view and the view survives using a lens tool;
+  held-item attribute changes for each tool; a captured photo is taken with the view
+  model hidden; badges show the correct discovery count after a scan; holding Q shows
+  Quick View with the scanned species and the new photo, the player can still move
+  while it is open, and releasing Q closes it.
+- Run lint, typecheck, unit tests, build and the full e2e suite. Capture screenshots of
+  each feature in first and third person, in Vietnamese, and inspect them.
+- Update docs/implementation-status.md, docs/game-design.md, docs/architecture.md and README.
+- Do not report a feature as complete until it is implemented and verified.
+  Do not report unexecuted tests as passed. List separately what was verified by test,
+  what was only seen in a screenshot, and what was not checked.

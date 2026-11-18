@@ -1,0 +1,152 @@
+{
+  "rusa-unicolor": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "Wikipedia: Sambar deer (classification, IUCN Vulnerable)",
+        "url": "https://en.wikipedia.org/wiki/Sambar_deer"
+      },
+      {
+        "label": "ASM Mammal Diversity Database: Rusa unicolor",
+        "url": "https://www.mammaldiversity.org/taxon/1006325"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "muntiacus-vaginalis": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "Wikipedia: Northern red muntjac (classification, IUCN Least Concern)",
+        "url": "https://en.wikipedia.org/wiki/Northern_red_muntjac"
+      },
+      {
+        "label": "ASM Mammal Diversity Database: Muntiacus vaginalis",
+        "url": "https://www.mammaldiversity.org/taxon/1006338"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "lepus-peguensis": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "Wikipedia: Burmese hare (classification, IUCN Least Concern)",
+        "url": "https://en.wikipedia.org/wiki/Burmese_hare"
+      },
+      {
+        "label": "ASM Mammal Diversity Database: Lepus peguensis",
+        "url": "https://mammaldiversity.org/taxon/1001101"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "callosciurus-erythraeus": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "Wikipedia: Pallas's squirrel (classification, IUCN Least Concern)",
+        "url": "https://en.wikipedia.org/wiki/Pallas%27s_squirrel"
+      },
+      {
+        "label": "ASM Mammal Diversity Database: Callosciurus erythraeus",
+        "url": "https://mammaldiversity.org/taxon/1001538"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "buceros-bicornis": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "IUCN SSC Hornbill Specialist Group: Great hornbill (Vulnerable)",
+        "url": "https://iucnhornbills.org/great-hornbill/"
+      },
+      {
+        "label": "BirdLife DataZone: Great Hornbill Buceros bicornis",
+        "url": "https://datazone.birdlife.org/species/factsheet/great-hornbill-buceros-bicornis"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "physignathus-cocincinus": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "The Reptile Database: Physignathus cocincinus (IUCN Vulnerable)",
+        "url": "https://reptile-database.reptarium.cz/Physignathus/cocincinus"
+      },
+      {
+        "label": "Wikipedia: Chinese water dragon",
+        "url": "https://en.wikipedia.org/wiki/Chinese_water_dragon"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "calotes-versicolor": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "Wikipedia: Oriental garden lizard (classification, IUCN Least Concern 2021)",
+        "url": "https://en.wikipedia.org/wiki/Oriental_garden_lizard"
+      },
+      {
+        "label": "Wikispecies: Calotes versicolor",
+        "url": "https://species.wikimedia.org/wiki/Calotes_versicolor"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "barbonymus-gonionotus": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "FishBase: Barbonymus gonionotus, Silver barb",
+        "url": "https://www.fishbase.se/summary/286"
+      },
+      {
+        "label": "Wikipedia: Java barb (classification, IUCN Least Concern)",
+        "url": "https://en.wikipedia.org/wiki/Java_barb"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "dipterocarpus-alatus": {
+    "taxonomy": "verified",
+    "conservation": "verified",
+    "sources": [
+      {
+        "label": "Wikipedia: Dipterocarpus alatus (classification, IUCN Vulnerable, 2023 assessment)",
+        "url": "https://en.wikipedia.org/wiki/Dipterocarpus_alatus"
+      },
+      {
+        "label": "Flora of the World: Dipterocarpus alatus Roxb.",
+        "url": "https://floraoftheworld.org/taxons/e8642cb6-e6b3-36e9-b8f4-439fa62d9708"
+      }
+    ],
+    "note": "Classification and Red List category checked on 2026-11-11. Other text on this page is compiled from general reference knowledge."
+  },
+  "xylotrupes-gideon": {
+    "taxonomy": "verified",
+    "conservation": "n/a",
+    "sources": [
+      {
+        "label": "Thailand Nature Project: Xylotrupes gideon (Linnaeus, 1767)",
+        "url": "https://www.thailandnatureproject.com/xylotrupes-gideon.html"
+      },
+      {
+        "label": "Wikipedia: Xylotrupes (species list)",
+        "url": "https://wiki.riteme.site/wiki/Xylotrupes"
+      }
+    ],
+    "note": "Classification checked on 2026-11-11. Caution: some authors assign the rhinoceros beetles of Vietnam and Thailand to a separate species, Xylotrupes socrates; this entry follows the broad concept of X. gideon. No Red List category is claimed."
+  }
+}

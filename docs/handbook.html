@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sổ tay kỹ thuật Wildlife Odyssey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700&family=Noto+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a field manual. Sticky contents rail on the left, one reading column, diagrams as plates. */
+:root {
+  --bg: #f3f5f0;
+  --surface: #ffffff;
+  --ink: #17231c;
+  --muted: #56665c;
+  --line: #d3dbd2;
+  --accent: #1c7a5a;
+  --accent-soft: #dcefe6;
+  --accent-mid: #7cc0a3;
+  --warm: #a85a14;
+  --display: 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Noto Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1612; --surface: #152019; --ink: #e4ede6; --muted: #9bb0a2; --line: #2a3a30;
+    --accent: #5ccfa2; --accent-soft: #173528; --accent-mid: #2f7d60; --warm: #e6a35c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1612; --surface: #152019; --ink: #e4ede6; --muted: #9bb0a2; --line: #2a3a30;
+  --accent: #5ccfa2; --accent-soft: #173528; --accent-mid: #2f7d60; --warm: #e6a35c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.65; }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; max-width: 1180px; margin: 0 auto; padding: 0 24px 80px; }
+nav.toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow: auto; padding: 28px 0; font-size: 14px; }
+nav.toc .brand { font-family: var(--display); font-weight: 700; font-size: 15px; line-height: 1.3; margin-bottom: 14px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; counter-reset: toc; }
+nav.toc li { counter-increment: toc; }
+nav.toc a { display: flex; gap: 8px; padding: 4px 8px; border-radius: 4px; color: var(--ink); text-decoration: none; }
+nav.toc a::before { content: counter(toc, decimal-leading-zero); font-family: var(--mono); font-size: 11.5px; color: var(--muted); padding-top: 2px; }
+nav.toc a:hover { background: var(--accent-soft); }
+main { min-width: 0; padding-top: 36px; }
+main > section, header.top { max-width: 800px; }
+header.top { padding-bottom: 8px; border-bottom: 2px solid var(--ink); margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.12; margin: 8px 0 12px; text-wrap: balance; }
+h2 { font-family: var(--display); font-size: 25px; line-height: 1.2; margin: 56px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .n { font-family: var(--mono); font-size: 13px; color: var(--accent); font-weight: 600; }
+h3 { font-family: var(--display); font-size: 17.5px; margin: 26px 0 6px; text-wrap: balance; }
+p { margin: 0 0 14px; }
+.lede { font-size: 18px; color: var(--muted); max-width: 62ch; }
+ul, ol { padding-left: 22px; margin: 0 0 14px; }
+li { margin-bottom: 4px; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; }
+pre { font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 22px 0 6px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.fact b { display: block; font-family: var(--display); font-size: 24px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.fact span { font-size: 13px; color: var(--muted); }
+.tablewrap { overflow-x: auto; margin: 0 0 18px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; min-width: 620px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.v { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; color: var(--muted); }
+figure { margin: 18px 0 22px; }
+.plate { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px; overflow-x: auto; }
+figcaption { font-size: 13.5px; color: var(--muted); margin-top: 8px; max-width: 70ch; }
+figcaption b { color: var(--ink); }
+.dg { display: block; width: 100%; min-width: 760px; height: auto; color: var(--ink); }
+.dg text { font-family: var(--body); font-size: 12px; fill: currentColor; }
+.dg .t { font-weight: 600; font-size: 12.5px; }
+.dg .s, .dg .lbl { font-size: 11px; fill: var(--muted); }
+.dg .pri { font-family: var(--mono); font-size: 12px; font-weight: 600; fill: var(--accent); }
+.dg .b { fill: var(--surface); stroke: currentColor; stroke-width: 1.1; }
+.dg .hl { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; }
+.dg .dashb { fill: transparent; stroke-dasharray: 5 4; }
+.dg .ln { stroke: currentColor; stroke-width: 1.2; fill: none; }
+.dg .dash { stroke-dasharray: 5 4; }
+.dg .r1 { fill: var(--accent); }
+.dg .r2 { fill: var(--accent-mid); }
+.dg .r3 { fill: var(--accent-soft); stroke: var(--line); }
+.note { border-left: 3px solid var(--warm); background: var(--surface); padding: 10px 14px; border-radius: 0 4px 4px 0; margin: 0 0 16px; font-size: 15px; }
+.note b { color: var(--warm); }
+.steps { list-style: none; padding: 0; counter-reset: st; display: flex; flex-direction: column; gap: 10px; }
+.steps > li { counter-increment: st; display: grid; grid-template-columns: 34px 1fr; gap: 12px; margin: 0; }
+.steps > li::before { content: counter(st); font-family: var(--mono); font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 50%; width: 30px; height: 30px; display: grid; place-items: center; font-size: 13px; }
+.road { list-style: none; padding: 0; margin: 18px 0; display: flex; flex-direction: column; gap: 14px; position: relative; }
+.road::before { content: ''; position: absolute; left: 21px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.stage { display: grid; grid-template-columns: 44px 1fr; gap: 16px; margin: 0; position: relative; }
+.stage .num { width: 44px; height: 44px; border-radius: 50%; background: var(--bg); border: 2px solid var(--warm); color: var(--warm); font-family: var(--mono); font-weight: 600; display: grid; place-items: center; font-size: 14px; z-index: 1; }
+.stage .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+.stage h3 { margin: 0 0 2px; }
+.stage .when { font-family: var(--mono); font-size: 12px; color: var(--warm); margin-bottom: 8px; }
+.stage dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; margin: 0; font-size: 14.5px; }
+.stage dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.stage dd { margin: 0; }
+.phase { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin: 26px 0 0 60px; }
+dl.gloss { display: grid; grid-template-columns: 180px 1fr; gap: 8px 18px; margin: 0; }
+dl.gloss dt { font-weight: 600; }
+dl.gloss dd { margin: 0; color: var(--muted); }
+.links { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px; list-style: none; padding: 0; }
+.links li { margin: 0; font-size: 14.5px; }
+.links span { display: block; color: var(--muted); font-size: 13px; }
+footer { margin-top: 60px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); max-width: 800px; }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; gap: 0; padding: 0 16px 60px; }
+  nav.toc { position: static; max-height: none; padding: 20px 0 0; }
+  nav.toc ol { flex-direction: row; flex-wrap: wrap; gap: 4px 6px; }
+  nav.toc a { border: 1px solid var(--line); }
+  main { padding-top: 20px; }
+  .stage dl, dl.gloss { grid-template-columns: 1fr; gap: 2px; }
+  dl.gloss dd { margin-bottom: 8px; }
+  .phase { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav class="toc" aria-label="Mục lục">
+  <div class="brand">Sổ tay kỹ thuật<br>Wildlife Odyssey 3D</div>
+  <ol>
+    <li><a href="#tong-quan">Dự án này là gì</a></li>
+    <li><a href="#stack">Tech stack</a></li>
+    <li><a href="#kien-truc">Kiến trúc phân lớp</a></li>
+    <li><a href="#frame">Một frame diễn ra thế nào</a></li>
+    <li><a href="#luong">Luồng một hành động</a></li>
+    <li><a href="#the-gioi">Thế giới và chunk</a></li>
+    <li><a href="#dung-hinh">Dựng hình cây cỏ</a></li>
+    <li><a href="#ai">AI động vật</a></li>
+    <li><a href="#luu">Lưu và tải</a></li>
+    <li><a href="#test">Kiểm thử</a></li>
+    <li><a href="#doc-code">Thứ tự đọc code</a></li>
+    <li><a href="#roadmap">Roadmap cho người mới</a></li>
+    <li><a href="#tai-lieu">Tài liệu nên đọc</a></li>
+    <li><a href="#thuat-ngu">Thuật ngữ</a></li>
+  </ol>
+</nav>
+<main>
+<header class="top">
+  <div class="eyebrow">Tài liệu cho người mới vào dự án</div>
+  <h1>Sổ tay kỹ thuật Wildlife Odyssey 3D</h1>
+  <p class="lede">Tech stack, kiến trúc, bảy sơ đồ để hiểu game chạy thế nào, và lộ trình học cho người mới bắt đầu lập trình game trên web. Mọi ví dụ đều trỏ vào file thật trong repo.</p>
+</header>
+
+<section id="tong-quan">
+<h2><span class="n">01</span>Dự án này là gì</h2>
+<p>Wildlife Odyssey 3D là game khám phá thiên nhiên chạy hoàn toàn trong trình duyệt. Người chơi đi bộ trong một khu bảo tồn rộng 1 km², quan sát động vật, quét, chụp ảnh, quay video và ghi lại vào nhật ký thực địa. Không có backend: build ra là file tĩnh, copy lên host nào cũng chạy.</p>
+<p>Điểm đáng học nhất của dự án: <b>gần như không có asset nào tải về</b>. Địa hình, cây, thú, texture và âm thanh đều sinh ra bằng code lúc chạy. Vì vậy bạn đọc được toàn bộ cách một thế giới 3D hình thành, từ con số đến điểm ảnh.</p>
+<div class="facts">
+  <div class="fact"><b>~16.000</b><span>dòng TypeScript / TSX trong <code>src/</code></span></div>
+  <div class="fact"><b>36</b><span>loài thật (22 động vật, 14 thực vật), song ngữ</span></div>
+  <div class="fact"><b>1024 m</b><span>cạnh bản đồ, chia 16 × 16 chunk 64 m</span></div>
+  <div class="fact"><b>152</b><span>unit test, cộng 3 kịch bản chạy trong Chrome</span></div>
+</div>
+<pre><code>npm install
+npm run dev        # http://127.0.0.1:5173, sửa code là thấy ngay
+npm run check      # lint + typecheck + unit test + build
+npm run test:e2e   # Playwright, cần build trước</code></pre>
+</section>
+
+<section id="stack">
+<h2><span class="n">02</span>Tech stack</h2>
+<p>Mỗi công nghệ giải quyết đúng một việc. Cột cuối là file nên mở đầu tiên để thấy nó được dùng ra sao.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Công nghệ</th><th>Bản</th><th>Làm gì trong dự án</th><th>Mở file này</th></tr></thead>
+<tbody>
+<tr><td><b>TypeScript</b> (strict)</td><td class="v">6.0</td><td>Ngôn ngữ của toàn bộ code. Kiểu dữ liệu bắt lỗi trước khi chạy: thiếu trường trong hồ sơ loài, sai tên sự kiện, quên trường hợp <code>null</code>.</td><td><code>src/data/species/index.ts</code></td></tr>
+<tr><td><b>Vite</b></td><td class="v">8.3</td><td>Dev server và công cụ build. Gói mọi thứ thành vài file tĩnh trong <code>dist/</code>.</td><td><code>vite.config.ts</code></td></tr>
+<tr><td><b>React</b></td><td class="v">19.3</td><td>Vẽ giao diện 2D: menu, HUD, nhật ký, bản đồ. Không dùng để cập nhật cảnh 3D mỗi frame.</td><td><code>src/ui/hud/Hud.tsx</code></td></tr>
+<tr><td><b>Three.js</b></td><td class="v">0.187</td><td>Thư viện đồ hoạ 3D trên WebGL: scene, camera, mesh, material, ánh sáng, shader.</td><td><code>src/engine/rendering/geoBuilder.ts</code></td></tr>
+<tr><td><b>React Three Fiber</b></td><td class="v">9.8</td><td>Cho phép viết scene Three.js bằng component React và cung cấp <code>useFrame</code>, vòng lặp game của dự án.</td><td><code>src/app/GameCanvas.tsx</code></td></tr>
+<tr><td><b>Drei</b></td><td class="v">10.7</td><td>Bộ tiện ích cho R3F. Dự án chỉ dùng <code>OrbitControls</code> ở màn hình soi mẫu vật.</td><td><code>src/ui/journal/Inspection.tsx</code></td></tr>
+<tr><td><b>Zustand</b></td><td class="v">5.1</td><td>Store trạng thái: thứ UI hiển thị và thứ được lưu (loài đã phát hiện, ảnh, nhiệm vụ, cài đặt).</td><td><code>src/store/gameStore.ts</code></td></tr>
+<tr><td><b>Rapier</b></td><td class="v">0.21</td><td>Engine vật lý (WASM). Chỉ lo va chạm của người chơi với địa hình, cây, đá, công trình.</td><td><code>src/engine/physics/physics.ts</code></td></tr>
+<tr><td><b>IndexedDB</b></td><td class="v">trình duyệt</td><td>Lưu tiến trình (JSON) và file ảnh, video (Blob) ngay trên máy người chơi.</td><td><code>src/systems/persistence/db.ts</code></td></tr>
+<tr><td><b>Web Audio</b></td><td class="v">trình duyệt</td><td>Tổng hợp âm thanh môi trường, tiếng kêu, tiếng màn trập. Không có file âm thanh.</td><td><code>src/engine/audio/audio.ts</code></td></tr>
+<tr><td><b>MediaRecorder</b></td><td class="v">trình duyệt</td><td>Quay video từ chính canvas của game.</td><td><code>src/systems/video/recorder.ts</code></td></tr>
+<tr><td><b>Vitest</b></td><td class="v">5.1</td><td>Unit test cho các hàm thuần: FSM, chấm điểm ảnh, nhiệm vụ, save.</td><td><code>src/tests/behavior.test.ts</code></td></tr>
+<tr><td><b>Playwright</b></td><td class="v">1.65</td><td>Điều khiển Chrome thật để chơi hết kịch bản 30 bước.</td><td><code>e2e/game.spec.ts</code></td></tr>
+<tr><td><b>ESLint</b></td><td class="v">10</td><td>Bắt lỗi phong cách và quy tắc hooks của React.</td><td><code>eslint.config.js</code></td></tr>
+</tbody></table></div>
+<div class="note"><b>Vì sao chọn web thay vì Unity hay Unreal?</b> Mục tiêu là một đường link mở được trên mọi máy, không cài đặt. Đổi lại phải tự lo những thứ engine lớn cho sẵn: streaming thế giới, LOD, lưu game. Đó cũng là lý do repo này hợp để học.</div>
+</section>
+
+<section id="kien-truc">
+<h2><span class="n">03</span>Kiến trúc phân lớp</h2>
+<p>Code chia thành sáu lớp. Lớp trên dùng lớp dưới, không có chiều ngược lại. Hai ô tô màu là hai nơi giữ trạng thái, và phân biệt được chúng là hiểu được nửa dự án.</p>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 0 860 602" role="img" aria-label="Sáu lớp của dự án: giao diện gọi action vào store, luật chơi đọc ghi runtime mỗi frame, phía dưới là thực thể, thế giới, engine và dữ liệu"><defs><marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="b" x="40" y="16" width="780" height="52" rx="6"/><text class="t" x="430.0" y="38.5" text-anchor="middle">ui/ — giao diện React (DOM)</text><text class="s" x="430.0" y="53.5" text-anchor="middle">HUD · khung ngắm · nhật ký · bản đồ · menu</text><rect class="b hl" x="40" y="118" width="370" height="56" rx="6"/><text class="t" x="225.0" y="142.5" text-anchor="middle">store/gameStore — Zustand</text><text class="s" x="225.0" y="157.5" text-anchor="middle">state của UI + mọi thứ được lưu</text><rect class="b hl" x="450" y="118" width="370" height="56" rx="6"/><text class="t" x="635.0" y="142.5" text-anchor="middle">store/runtime — object thường</text><text class="s" x="635.0" y="157.5" text-anchor="middle">state đổi mỗi frame: vị trí, mục tiêu, giờ</text><line class="ln" x1="150" y1="68" x2="150" y2="118" marker-end="url(#ar1)"/><text class="lbl" x="158" y="97" text-anchor="start">gọi action</text><line class="ln" x1="300" y1="118" x2="300" y2="68" marker-end="url(#ar1)"/><text class="lbl" x="308" y="97" text-anchor="start">subscribe → vẽ lại</text><line class="ln dash" x1="635" y1="118" x2="635" y2="68" marker-end="url(#ar1)"/><text class="lbl" x="643" y="97" text-anchor="start">UI đọc mỗi 100 ms</text><rect class="b" x="40" y="224" width="780" height="52" rx="6"/><text class="t" x="430.0" y="246.5" text-anchor="middle">systems/ — luật chơi</text><text class="s" x="430.0" y="261.5" text-anchor="middle">interaction · identification · photography · video · quests · persistence</text><line class="ln" x1="225" y1="224" x2="225" y2="174" marker-end="url(#ar1)"/><text class="lbl" x="233" y="203" text-anchor="start">discover(), emit(), notify()</text><line class="ln" x1="635" y1="224" x2="635" y2="174" marker-end="url(#ar1)" marker-start="url(#ar1)"/><text class="lbl" x="643" y="203" text-anchor="start">đọc và ghi mỗi frame</text><rect class="b" x="40" y="326" width="370" height="56" rx="6"/><text class="t" x="225.0" y="350.5" text-anchor="middle">entities/ — player, wildlife</text><text class="s" x="225.0" y="365.5" text-anchor="middle">điều khiển, FSM hành vi, rig, animation</text><rect class="b" x="450" y="326" width="370" height="56" rx="6"/><text class="t" x="635.0" y="350.5" text-anchor="middle">world/ — terrain, vegetation, water, weather</text><text class="s" x="635.0" y="365.5" text-anchor="middle">sinh địa hình, nạp chunk, bầu trời</text><line class="ln" x1="225" y1="276" x2="225" y2="326" marker-end="url(#ar1)"/><text class="lbl" x="233" y="305" text-anchor="start">dùng</text><line class="ln" x1="635" y1="276" x2="635" y2="326" marker-end="url(#ar1)"/><text class="lbl" x="643" y="305" text-anchor="start">dùng</text><rect class="b" x="40" y="432" width="780" height="52" rx="6"/><text class="t" x="430.0" y="454.5" text-anchor="middle">engine/ — rendering, physics, input, camera, audio</text><text class="s" x="430.0" y="469.5" text-anchor="middle">công cụ dùng chung, không biết gì về luật chơi</text><line class="ln" x1="225" y1="382" x2="225" y2="432" marker-end="url(#ar1)"/><text class="lbl" x="233" y="411" text-anchor="start">dùng</text><line class="ln" x1="635" y1="382" x2="635" y2="432" marker-end="url(#ar1)"/><text class="lbl" x="643" y="411" text-anchor="start">dùng</text><rect class="b dashb" x="40" y="534" width="780" height="52" rx="6"/><text class="t" x="430.0" y="556.5" text-anchor="middle">data/ + i18n/ + config.ts</text><text class="s" x="430.0" y="571.5" text-anchor="middle">loài (JSON) · biome · nhiệm vụ · chuỗi vi/en · hằng số</text><line class="ln dash" x1="430" y1="534" x2="430" y2="484" marker-end="url(#ar1)"/><text class="lbl" x="438" y="513" text-anchor="start">mọi lớp phía trên đều import</text></svg></div>
+<figcaption><b>Hình 1.</b> UI chỉ nói chuyện với store. Luật chơi (systems) đọc và ghi <code>runtime</code> mỗi frame, và chỉ gọi action của store khi có chuyện đáng lưu hoặc đáng hiển thị.</figcaption>
+</figure>
+<h3>Hai nơi giữ trạng thái</h3>
+<div class="tablewrap"><table>
+<thead><tr><th></th><th>store/gameStore (Zustand)</th><th>store/runtime (object thường)</th></tr></thead>
+<tbody>
+<tr><td><b>Chứa gì</b></td><td>Loài đã phát hiện, ảnh, video, nhiệm vụ, cài đặt, công cụ đang cầm, panel đang mở</td><td>Vị trí người chơi, hướng camera, mục tiêu đang ngắm, tiến độ quét, giờ trong ngày, số đo hiệu năng</td></tr>
+<tr><td><b>Đổi bao lâu một lần</b></td><td>Khi có sự kiện: vài lần mỗi phút</td><td>Mỗi frame: 60 lần mỗi giây</td></tr>
+<tr><td><b>Ai đọc</b></td><td>Component React, tự vẽ lại khi giá trị đổi</td><td>Code trong <code>useFrame</code>. UI đọc qua <code>useTick(100)</code>, tức 10 lần mỗi giây</td></tr>
+<tr><td><b>Có được lưu</b></td><td>Có, qua <code>toSave()</code></td><td>Không, trừ vị trí người chơi</td></tr>
+</tbody></table></div>
+<p>Nếu để vị trí người chơi trong Zustand, React sẽ vẽ lại giao diện 60 lần mỗi giây và game giật. Quy tắc của dự án: <b>vòng lặp frame không bao giờ kích hoạt React render</b>.</p>
+<h3>Năm nguyên tắc xuyên suốt</h3>
+<ul>
+<li><b>Lõi thuần, vỏ mỏng.</b> Phần quyết định (FSM hành vi, chấm điểm ảnh, nhiệm vụ, đọc save, toán zoom) là hàm thuần, không đụng Three.js hay DOM, nên test được trong vài mili giây. Component chỉ nối chúng vào màn hình.</li>
+<li><b>Một nguồn sự thật cho địa hình.</b> Lưới độ cao 513 × 513 sinh một lần từ seed, dùng chung cho mesh, vật lý, đặt cây, động vật, shader nước và bản đồ.</li>
+<li><b>Dữ liệu tách khỏi code.</b> Thêm một loài là thêm JSON, một hồ sơ hành vi và một bộ tham số model. Thêm nhiệm vụ là thêm một object trong <code>quests.ts</code>.</li>
+<li><b>Tất định.</b> Cùng seed thì cùng thế giới. Nhờ vậy test đặt được người chơi cạnh đúng cái cây đó ở mọi lần chạy.</li>
+<li><b>Dọn tài nguyên.</b> Geometry, material, texture đều được <code>dispose()</code> khi không còn dùng. Đợt QA đo số geometry trên GPU qua ba vòng bản đồ: 152, 152, 152.</li>
+</ul>
+</section>
+
+<section id="frame">
+<h2><span class="n">04</span>Một frame diễn ra thế nào</h2>
+<p>Game là một vòng lặp: đọc input, cập nhật thế giới, vẽ, lặp lại. Ở đây mỗi hệ thống đăng ký một callback bằng <code>useFrame</code> kèm số ưu tiên, và R3F gọi chúng theo thứ tự đó trong mỗi frame.</p>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 0 880 186" role="img" aria-label="Thứ tự tám bước trong một frame, từ Sky ưu tiên âm sáu đến RenderLoop ưu tiên một"><defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="b" x="14" y="36" width="96" height="92" rx="6"/><text class="pri" x="62" y="56" text-anchor="middle">−6</text><text class="t" x="62" y="76" text-anchor="middle">Sky</text><text class="s" x="62" y="96" text-anchor="middle">giờ, thời tiết</text><text class="s" x="62" y="111" text-anchor="middle">mặt trời, sương</text><line class="ln" x1="110" y1="82" x2="122" y2="82" marker-end="url(#ar2)"/><rect class="b" x="122" y="36" width="96" height="92" rx="6"/><text class="pri" x="170" y="56" text-anchor="middle">−5</text><text class="t" x="170" y="76" text-anchor="middle">Terrain</text><text class="s" x="170" y="96" text-anchor="middle">nạp / bỏ chunk</text><text class="s" x="170" y="111" text-anchor="middle">chọn LOD</text><line class="ln" x1="218" y1="82" x2="230" y2="82" marker-end="url(#ar2)"/><rect class="b" x="230" y="36" width="96" height="92" rx="6"/><text class="pri" x="278" y="56" text-anchor="middle">−4</text><text class="t" x="278" y="76" text-anchor="middle">Vegetation</text><text class="s" x="278" y="96" text-anchor="middle">dựng lại batch</text><text class="s" x="278" y="111" text-anchor="middle">khi đổi chunk</text><line class="ln" x1="326" y1="82" x2="338" y2="82" marker-end="url(#ar2)"/><rect class="b" x="338" y="36" width="96" height="92" rx="6"/><text class="pri" x="386" y="56" text-anchor="middle">−3</text><text class="t" x="386" y="76" text-anchor="middle">Player · Water</text><text class="s" x="386" y="96" text-anchor="middle">input → vật lý</text><text class="s" x="386" y="111" text-anchor="middle">→ camera</text><line class="ln" x1="434" y1="82" x2="446" y2="82" marker-end="url(#ar2)"/><rect class="b" x="446" y="36" width="96" height="92" rx="6"/><text class="pri" x="494" y="56" text-anchor="middle">−2</text><text class="t" x="494" y="76" text-anchor="middle">Wildlife</text><text class="s" x="494" y="96" text-anchor="middle">FSM, di chuyển</text><text class="s" x="494" y="111" text-anchor="middle">animation</text><line class="ln" x1="542" y1="82" x2="554" y2="82" marker-end="url(#ar2)"/><rect class="b" x="554" y="36" width="96" height="92" rx="6"/><text class="pri" x="602" y="56" text-anchor="middle">−1</text><text class="t" x="602" y="76" text-anchor="middle">Interaction</text><text class="s" x="602" y="96" text-anchor="middle">ngắm mục tiêu</text><text class="s" x="602" y="111" text-anchor="middle">quét, lấy nét</text><line class="ln" x1="650" y1="82" x2="662" y2="82" marker-end="url(#ar2)"/><rect class="b" x="662" y="36" width="96" height="92" rx="6"/><text class="pri" x="710" y="56" text-anchor="middle">0</text><text class="t" x="710" y="76" text-anchor="middle">Director</text><text class="s" x="710" y="96" text-anchor="middle">trộn âm thanh</text><text class="s" x="710" y="111" text-anchor="middle">theo vị trí</text><line class="ln" x1="758" y1="82" x2="770" y2="82" marker-end="url(#ar2)"/><rect class="b hl" x="770" y="36" width="96" height="92" rx="6"/><text class="pri" x="818" y="56" text-anchor="middle">1</text><text class="t" x="818" y="76" text-anchor="middle">RenderLoop</text><text class="s" x="818" y="96" text-anchor="middle">vẽ khung hình</text><text class="s" x="818" y="111" text-anchor="middle">chụp, đo perf</text><text class="lbl" x="14" y="20" text-anchor="start">useFrame(callback, priority) — số nhỏ chạy trước</text><path class="ln" d="M818,128 L818,156 L62,156 L62,130" marker-end="url(#ar2)"/><text class="lbl" x="440" y="174" text-anchor="middle">frame kế tiếp (requestAnimationFrame)</text></svg></div>
+<figcaption><b>Hình 2.</b> Thứ tự có lý do: người chơi di chuyển trước, rồi thú phản ứng với vị trí mới, rồi mới tính xem tâm ngắm đang trúng con nào, cuối cùng mới vẽ.</figcaption>
+</figure>
+<pre><code>// src/entities/wildlife/Wildlife.tsx (rút gọn)
+useFrame((_, rawDt) =&gt; {
+  // dt bị chặn trên 0,1 s để một frame chậm không làm thú "nhảy cóc";
+  // nhân với scale để slow motion (Z) làm chậm cả mô phỏng.
+  ctx.dt = Math.min(rawDt, 0.1) * runtime.time.scale;
+  system.update(ctx);
+}, -2); // sau Player (-3), trước Interaction (-1)</code></pre>
+<p><b>Delta time</b> (<code>dt</code>) là số giây trôi qua từ frame trước. Mọi chuyển động nhân với <code>dt</code> để tốc độ không phụ thuộc máy nhanh hay chậm. Lỗi thật trong dự án cho thấy cạm bẫy của nó: cánh ong vỗ 40 Hz từng được tính bằng <code>pha += dt × 40 × 2π</code>. Ở đúng 10, 20 hoặc 40 fps, mỗi frame pha tăng một số nguyên vòng, nên cánh đứng yên. Chi tiết trong <code>docs/qa-report.md</code>, test tái hiện trong <code>src/tests/animation.test.ts</code>.</p>
+</section>
+
+<section id="luong">
+<h2><span class="n">05</span>Luồng một hành động: quét một loài mới</h2>
+<p>Theo một phím bấm đi xuyên qua mọi lớp là cách nhanh nhất để nhớ kiến trúc. Dưới đây là đường đi của phím F cho tới khi loài mới nằm trong nhật ký và trên ổ đĩa.</p>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 0 880 306" role="img" aria-label="Từ phím F đến bản ghi loài mới: input, công cụ, ngắm mục tiêu, discover, sự kiện, nhiệm vụ, HUD và tự lưu"><defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="b" x="20" y="24" width="180" height="58" rx="6"/><text class="t" x="110.0" y="49.5" text-anchor="middle">Người chơi nhấn F</text><text class="s" x="110.0" y="64.5" text-anchor="middle">engine/input</text><rect class="b" x="240" y="24" width="180" height="58" rx="6"/><text class="t" x="330.0" y="49.5" text-anchor="middle">controls.ts</text><text class="s" x="330.0" y="64.5" text-anchor="middle">selectTool(&#x27;scanner&#x27;)</text><rect class="b" x="460" y="24" width="180" height="58" rx="6"/><text class="t" x="550.0" y="49.5" text-anchor="middle">Interaction (mỗi frame)</text><text class="s" x="550.0" y="64.5" text-anchor="middle">xếp hạng, kiểm che khuất</text><rect class="b hl" x="680" y="24" width="180" height="58" rx="6"/><text class="t" x="770.0" y="49.5" text-anchor="middle">runtime.target</text><text class="s" x="770.0" y="64.5" text-anchor="middle">scan.progress tăng theo dt</text><line class="ln" x1="200" y1="53" x2="240" y2="53" marker-end="url(#ar3)"/><line class="ln" x1="420" y1="53" x2="460" y2="53" marker-end="url(#ar3)"/><line class="ln" x1="640" y1="53" x2="680" y2="53" marker-end="url(#ar3)"/><line class="ln" x1="770" y1="82" x2="770" y2="150" marker-end="url(#ar3)"/><text class="lbl" x="778" y="121" text-anchor="start">progress = 1</text><rect class="b hl" x="680" y="150" width="180" height="58" rx="6"/><text class="t" x="770.0" y="175.5" text-anchor="middle">store.discover()</text><text class="s" x="770.0" y="190.5" text-anchor="middle">ghi DiscoveryRecord</text><rect class="b" x="460" y="150" width="180" height="58" rx="6"/><text class="t" x="550.0" y="175.5" text-anchor="middle">emit({ type: &#x27;discover&#x27; })</text><text class="s" x="550.0" y="190.5" text-anchor="middle">sự kiện gameplay</text><rect class="b" x="240" y="150" width="180" height="58" rx="6"/><text class="t" x="330.0" y="175.5" text-anchor="middle">quests/engine</text><text class="s" x="330.0" y="190.5" text-anchor="middle">applyEvent → tiến độ nhiệm vụ</text><rect class="b" x="20" y="150" width="180" height="58" rx="6"/><text class="t" x="110.0" y="175.5" text-anchor="middle">HUD</text><text class="s" x="110.0" y="190.5" text-anchor="middle">thông báo + thẻ loài mới</text><line class="ln" x1="680" y1="179" x2="640" y2="179" marker-end="url(#ar3)"/><line class="ln" x1="460" y1="179" x2="420" y2="179" marker-end="url(#ar3)"/><line class="ln" x1="240" y1="179" x2="200" y2="179" marker-end="url(#ar3)"/><line class="ln" x1="770" y1="208" x2="770" y2="250" marker-end="url(#ar3)"/><text class="lbl" x="778" y="234" text-anchor="start">dirty + 1</text><rect class="b dashb" x="680" y="250" width="180" height="44" rx="6"/><text class="t" x="770.0" y="276.0" text-anchor="middle">autosave → IndexedDB</text></svg></div>
+<figcaption><b>Hình 3.</b> Hàng trên chạy mỗi frame và chỉ ghi vào <code>runtime</code>. Hàng dưới chỉ chạy một lần, lúc quét xong, và đi qua store. Hệ thống nhiệm vụ không biết gì về máy quét: nó chỉ nghe sự kiện.</figcaption>
+</figure>
+<p>Chụp ảnh, quay video, đọc biển báo đều theo đúng khuôn này: hệ thống phát một <code>GameEvent</code>, engine nhiệm vụ so sự kiện với điều kiện khai báo trong dữ liệu. Vì thế nhiệm vụ 2 (“Sự sống bên sông”) không cần dòng code riêng nào.</p>
+</section>
+
+<section id="the-gioi">
+<h2><span class="n">06</span>Thế giới và chunk</h2>
+<p>Bản đồ 1 km² không thể vẽ hết cùng lúc. Nó được chia thành ô vuông 64 m gọi là <b>chunk</b>; chỉ những chunk quanh người chơi mới tồn tại, và càng xa thì càng ít chi tiết (<b>LOD</b>, level of detail).</p>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 0 860 368" role="img" aria-label="Lưới chín nhân chín chunk quanh người chơi, chia ba vùng chi tiết theo khoảng cách"><defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="r3" x="30" y="30" width="32" height="32" rx="3"/><rect class="r3" x="64" y="30" width="32" height="32" rx="3"/><rect class="r3" x="98" y="30" width="32" height="32" rx="3"/><rect class="r3" x="132" y="30" width="32" height="32" rx="3"/><rect class="r3" x="166" y="30" width="32" height="32" rx="3"/><rect class="r3" x="200" y="30" width="32" height="32" rx="3"/><rect class="r3" x="234" y="30" width="32" height="32" rx="3"/><rect class="r3" x="268" y="30" width="32" height="32" rx="3"/><rect class="r3" x="302" y="30" width="32" height="32" rx="3"/><rect class="r3" x="30" y="64" width="32" height="32" rx="3"/><rect class="r3" x="64" y="64" width="32" height="32" rx="3"/><rect class="r3" x="98" y="64" width="32" height="32" rx="3"/><rect class="r3" x="132" y="64" width="32" height="32" rx="3"/><rect class="r3" x="166" y="64" width="32" height="32" rx="3"/><rect class="r3" x="200" y="64" width="32" height="32" rx="3"/><rect class="r3" x="234" y="64" width="32" height="32" rx="3"/><rect class="r3" x="268" y="64" width="32" height="32" rx="3"/><rect class="r3" x="302" y="64" width="32" height="32" rx="3"/><rect class="r3" x="30" y="98" width="32" height="32" rx="3"/><rect class="r3" x="64" y="98" width="32" height="32" rx="3"/><rect class="r2" x="98" y="98" width="32" height="32" rx="3"/><rect class="r2" x="132" y="98" width="32" height="32" rx="3"/><rect class="r2" x="166" y="98" width="32" height="32" rx="3"/><rect class="r2" x="200" y="98" width="32" height="32" rx="3"/><rect class="r2" x="234" y="98" width="32" height="32" rx="3"/><rect class="r3" x="268" y="98" width="32" height="32" rx="3"/><rect class="r3" x="302" y="98" width="32" height="32" rx="3"/><rect class="r3" x="30" y="132" width="32" height="32" rx="3"/><rect class="r3" x="64" y="132" width="32" height="32" rx="3"/><rect class="r2" x="98" y="132" width="32" height="32" rx="3"/><rect class="r1" x="132" y="132" width="32" height="32" rx="3"/><rect class="r1" x="166" y="132" width="32" height="32" rx="3"/><rect class="r1" x="200" y="132" width="32" height="32" rx="3"/><rect class="r2" x="234" y="132" width="32" height="32" rx="3"/><rect class="r3" x="268" y="132" width="32" height="32" rx="3"/><rect class="r3" x="302" y="132" width="32" height="32" rx="3"/><rect class="r3" x="30" y="166" width="32" height="32" rx="3"/><rect class="r3" x="64" y="166" width="32" height="32" rx="3"/><rect class="r2" x="98" y="166" width="32" height="32" rx="3"/><rect class="r1" x="132" y="166" width="32" height="32" rx="3"/><rect class="r1" x="166" y="166" width="32" height="32" rx="3"/><rect class="r1" x="200" y="166" width="32" height="32" rx="3"/><rect class="r2" x="234" y="166" width="32" height="32" rx="3"/><rect class="r3" x="268" y="166" width="32" height="32" rx="3"/><rect class="r3" x="302" y="166" width="32" height="32" rx="3"/><rect class="r3" x="30" y="200" width="32" height="32" rx="3"/><rect class="r3" x="64" y="200" width="32" height="32" rx="3"/><rect class="r2" x="98" y="200" width="32" height="32" rx="3"/><rect class="r1" x="132" y="200" width="32" height="32" rx="3"/><rect class="r1" x="166" y="200" width="32" height="32" rx="3"/><rect class="r1" x="200" y="200" width="32" height="32" rx="3"/><rect class="r2" x="234" y="200" width="32" height="32" rx="3"/><rect class="r3" x="268" y="200" width="32" height="32" rx="3"/><rect class="r3" x="302" y="200" width="32" height="32" rx="3"/><rect class="r3" x="30" y="234" width="32" height="32" rx="3"/><rect class="r3" x="64" y="234" width="32" height="32" rx="3"/><rect class="r2" x="98" y="234" width="32" height="32" rx="3"/><rect class="r2" x="132" y="234" width="32" height="32" rx="3"/><rect class="r2" x="166" y="234" width="32" height="32" rx="3"/><rect class="r2" x="200" y="234" width="32" height="32" rx="3"/><rect class="r2" x="234" y="234" width="32" height="32" rx="3"/><rect class="r3" x="268" y="234" width="32" height="32" rx="3"/><rect class="r3" x="302" y="234" width="32" height="32" rx="3"/><rect class="r3" x="30" y="268" width="32" height="32" rx="3"/><rect class="r3" x="64" y="268" width="32" height="32" rx="3"/><rect class="r3" x="98" y="268" width="32" height="32" rx="3"/><rect class="r3" x="132" y="268" width="32" height="32" rx="3"/><rect class="r3" x="166" y="268" width="32" height="32" rx="3"/><rect class="r3" x="200" y="268" width="32" height="32" rx="3"/><rect class="r3" x="234" y="268" width="32" height="32" rx="3"/><rect class="r3" x="268" y="268" width="32" height="32" rx="3"/><rect class="r3" x="302" y="268" width="32" height="32" rx="3"/><rect class="r3" x="30" y="302" width="32" height="32" rx="3"/><rect class="r3" x="64" y="302" width="32" height="32" rx="3"/><rect class="r3" x="98" y="302" width="32" height="32" rx="3"/><rect class="r3" x="132" y="302" width="32" height="32" rx="3"/><rect class="r3" x="166" y="302" width="32" height="32" rx="3"/><rect class="r3" x="200" y="302" width="32" height="32" rx="3"/><rect class="r3" x="234" y="302" width="32" height="32" rx="3"/><rect class="r3" x="268" y="302" width="32" height="32" rx="3"/><rect class="r3" x="302" y="302" width="32" height="32" rx="3"/><circle cx="182" cy="182" r="5" fill="currentColor"/><text class="s" x="30" y="356" text-anchor="start">1 ô = 1 chunk = 64 m × 64 m. Chấm đen: người chơi.</text><rect class="r1" x="380" y="44" width="30" height="30" rx="3"/><text class="t" x="424" y="57" text-anchor="start">Vòng 0–1 — Cây chi tiết cao, cỏ và hoa dại</text><text class="s" x="424" y="74" text-anchor="start">cỏ thu nhỏ dần rồi biến mất ở 80 m; địa hình ô 2 m</text><rect class="r2" x="380" y="118" width="30" height="30" rx="3"/><text class="t" x="424" y="131" text-anchor="start">Vòng 2 — Cây bụi, dương xỉ + cây dùng model xa</text><text class="s" x="424" y="148" text-anchor="start">vẫn quét và chọn được; địa hình ô 4 m</text><rect class="r3" x="380" y="192" width="30" height="30" rx="3"/><text class="t" x="424" y="205" text-anchor="start">Vòng 3–4 — Chỉ cây model xa</text><text class="s" x="424" y="222" text-anchor="start">địa hình thưa dần: ô 4 m ở vòng 3, 8 m ở vòng 4</text><text class="lbl" x="380" y="282" text-anchor="start">Preset Medium: 9 × 9 = 81 chunk (hình bên).</text><text class="lbl" x="380" y="300" text-anchor="start">Low: 5 × 5 = 25. High: tối đa 13 × 13.</text><text class="lbl" x="380" y="326" text-anchor="start">Động vật chỉ được mô phỏng trong 150 m (Medium).</text><text class="lbl" x="380" y="344" text-anchor="start">Collider địa hình chỉ tồn tại cho 3 × 3 chunk quanh người chơi.</text></svg></div>
+<figcaption><b>Hình 4.</b> Khi người chơi bước sang chunk khác, vòng ngoài cùng phía sau bị bỏ và vòng phía trước được dựng. Giữa hai lần đó không có gì phải tính lại.</figcaption>
+</figure>
+<h3>Địa hình sinh ra thế nào</h3>
+<ol>
+<li><code>world/terrain/layout.ts</code> đặt tay những thứ cố định: đường sông, hồ, thác, phế tích, trại.</li>
+<li><code>heightmap.ts</code> cộng nhiều lớp noise theo seed <code>20261111</code> thành lưới độ cao 513 × 513 (mỗi ô 2 m), rồi suy ra độ dốc, biome và màu nền.</li>
+<li><code>Terrain.tsx</code> cắt lưới thành mesh từng chunk. <code>terrainMaterial.ts</code> thêm chi tiết từng điểm ảnh: loang màu, đá ở sườn dốc, viền ướt, caustics dưới nước.</li>
+<li><code>placement.ts</code> rải cây theo quy tắc của biome, dùng bộ sinh số ngẫu nhiên có seed riêng cho từng chunk.</li>
+</ol>
+<div class="note"><b>Quy ước trục cần thuộc:</b> +x là đông, +z là nam, bắc là −z. Model thú quay mặt về +z. Sai quy ước này là lỗi phổ biến nhất khi mới viết code chuyển động.</div>
+</section>
+
+<section id="dung-hinh">
+<h2><span class="n">07</span>Dựng hình cây cỏ</h2>
+<p>Một khu rừng có hàng nghìn cây. Vẽ từng cây một lệnh thì GPU nghẽn vì số <b>draw call</b>. Dự án gom mọi cây cùng loại vào một <code>InstancedMesh</code>: một geometry, một material, một lệnh vẽ, kèm danh sách vị trí.</p>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 0 880 280" role="img" aria-label="Đường đi của một cái cây: texture atlas và GeoBuilder tạo material và geometry dùng chung, placement cấp vị trí, InstancedMesh vẽ cả loạt"><defs><marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="b" x="240" y="20" width="170" height="52" rx="6"/><text class="t" x="325.0" y="42.5" text-anchor="middle">proceduralTextures</text><text class="s" x="325.0" y="57.5" text-anchor="middle">atlas 1024 px, 16 ô</text><rect class="b hl" x="460" y="20" width="170" height="52" rx="6"/><text class="t" x="545.0" y="42.5" text-anchor="middle">windMaterial</text><text class="s" x="545.0" y="57.5" text-anchor="middle">1 shader cho mọi cây</text><line class="ln" x1="410" y1="46" x2="460" y2="46" marker-end="url(#ar6)"/><text class="lbl" x="435.0" y="38" text-anchor="middle">map</text><rect class="b" x="20" y="116" width="170" height="52" rx="6"/><text class="t" x="105.0" y="138.5" text-anchor="middle">GeoBuilder</text><text class="s" x="105.0" y="153.5" text-anchor="middle">gộp các phần → 1 buffer</text><rect class="b" x="240" y="116" width="170" height="52" rx="6"/><text class="t" x="325.0" y="138.5" text-anchor="middle">plantModels</text><text class="s" x="325.0" y="153.5" text-anchor="middle">getPlantGeometry + cache</text><rect class="b hl" x="460" y="116" width="170" height="52" rx="6"/><text class="t" x="545.0" y="138.5" text-anchor="middle">InstancedMesh</text><text class="s" x="545.0" y="153.5" text-anchor="middle">1 batch / model / LOD</text><rect class="b" x="680" y="116" width="170" height="52" rx="6"/><text class="t" x="765.0" y="138.5" text-anchor="middle">GPU</text><text class="s" x="765.0" y="153.5" text-anchor="middle">khoảng 60–200 draw call</text><line class="ln" x1="190" y1="142" x2="240" y2="142" marker-end="url(#ar6)"/><text class="lbl" x="215.0" y="134" text-anchor="middle">buffer</text><line class="ln" x1="410" y1="142" x2="460" y2="142" marker-end="url(#ar6)"/><text class="lbl" x="435.0" y="134" text-anchor="middle">hình</text><line class="ln" x1="630" y1="142" x2="680" y2="142" marker-end="url(#ar6)"/><text class="lbl" x="655.0" y="134" text-anchor="middle">vẽ</text><line class="ln" x1="545" y1="72" x2="545" y2="116" marker-end="url(#ar6)"/><text class="lbl" x="553" y="98" text-anchor="start">material dùng chung</text><rect class="b" x="460" y="212" width="170" height="52" rx="6"/><text class="t" x="545.0" y="234.5" text-anchor="middle">placement.ts</text><text class="s" x="545.0" y="249.5" text-anchor="middle">vị trí từ seed + chunk</text><line class="ln" x1="545" y1="212" x2="545" y2="168" marker-end="url(#ar6)"/><text class="lbl" x="553" y="195" text-anchor="start">ma trận và màu từng cây</text></svg></div>
+<figcaption><b>Hình 5.</b> Geometry và material được tạo một lần rồi dùng chung. Thứ duy nhất khác nhau giữa hai cây cùng loài là ma trận vị trí và sắc độ, nên cả rừng mưa chỉ tốn vài chục đến vài trăm draw call.</figcaption>
+</figure>
+<ul>
+<li><b>Atlas:</b> một tấm texture 1024 px chia 16 ô (cụm lá, lá kim, tàu dương xỉ, cỏ, vỏ cây, đá, vân lông, vảy), vẽ bằng Canvas lúc khởi động. Xem <code>proceduralTextures.ts</code>.</li>
+<li><b>GeoBuilder:</b> ghép các khối cơ bản (thân, cành, thẻ lá) thành một buffer với các thuộc tính đỉnh: vị trí, pháp tuyến, màu, độ rung theo gió, UV.</li>
+<li><b>Tán cây:</b> vài chục tấm thẻ phẳng mang hình cụm lá, cắt viền bằng alpha test, bao quanh một lõi tối. Pháp tuyến của thẻ hướng ra ngoài tâm tán nên cả khối được chiếu sáng như một thể tròn.</li>
+<li><b>Preset Low</b> dựng một geometry khác hẳn: tán đặc, không texture. Chất lượng đồ hoạ ở đây chọn cả hình học, không chỉ chỉnh thông số.</li>
+</ul>
+<pre><code>// Zoom quang học: đổi góc nhìn (FOV), không phóng to ảnh.
+// src/engine/camera/zoom.ts
+fov = 2 · atan( tan(fov₀ / 2) / zoom )      // fov₀ = 62°
+// 1× → 62,0°   2× → 33,4°   4× → 17,1°   8× → 8,6°</code></pre>
+</section>
+
+<section id="ai">
+<h2><span class="n">08</span>AI động vật</h2>
+<p>Mỗi con thú có một <b>máy trạng thái hữu hạn</b> (FSM): tại mỗi thời điểm nó ở đúng một trạng thái, và có quy tắc rõ ràng để chuyển sang trạng thái khác. Hàm <code>decideBehavior</code> trong <code>behavior.ts</code> nhận hồ sơ loài, trạng thái hiện tại và những gì con vật cảm nhận được, trả về trạng thái kế tiếp. Nó là hàm thuần nên 18 test chạy xong trong chớp mắt.</p>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 0 860 320" role="img" aria-label="Máy trạng thái của thú đi bộ: nhóm trạng thái bình thường, rồi alert, fleeing, searching, returning và quay về bình thường"><defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="b dashb" x="20" y="36" width="380" height="268" rx="10"/><text class="t" x="34" y="56" text-anchor="start">Bình thường (calm)</text><rect class="b" x="40" y="72" width="150" height="40" rx="20"/><text class="t" x="115.0" y="96.0" text-anchor="middle">idle</text><rect class="b" x="220" y="72" width="150" height="40" rx="20"/><text class="t" x="295.0" y="96.0" text-anchor="middle">walking</text><rect class="b" x="40" y="132" width="150" height="40" rx="20"/><text class="t" x="115.0" y="156.0" text-anchor="middle">feeding</text><rect class="b" x="220" y="132" width="150" height="40" rx="20"/><text class="t" x="295.0" y="156.0" text-anchor="middle">drinking</text><rect class="b" x="130" y="192" width="150" height="40" rx="20"/><text class="t" x="205.0" y="216.0" text-anchor="middle">resting</text><text class="s" x="34" y="258" text-anchor="start">Đổi qua lại khi hết thời lượng của trạng thái.</text><text class="s" x="34" y="274" text-anchor="start">Khát → drinking. Ngoài giờ hoạt động → resting.</text><rect class="b hl" x="470" y="72" width="150" height="44" rx="22"/><text class="t" x="545.0" y="98.0" text-anchor="middle">alert</text><rect class="b hl" x="690" y="72" width="150" height="44" rx="22"/><text class="t" x="765.0" y="98.0" text-anchor="middle">fleeing</text><rect class="b" x="690" y="212" width="150" height="44" rx="22"/><text class="t" x="765.0" y="238.0" text-anchor="middle">searching</text><rect class="b" x="470" y="212" width="150" height="44" rx="22"/><text class="t" x="545.0" y="238.0" text-anchor="middle">returning</text><line class="ln" x1="400" y1="94" x2="470" y2="94" marker-end="url(#ar4)"/><text class="lbl" x="435" y="84" text-anchor="middle">vào bán kính</text><text class="lbl" x="435" y="110" text-anchor="middle">nhận biết</text><line class="ln" x1="620" y1="94" x2="690" y2="94" marker-end="url(#ar4)"/><text class="lbl" x="655" y="84" text-anchor="middle">quá gần</text><line class="ln" x1="765" y1="116" x2="765" y2="212" marker-end="url(#ar4)"/><text class="lbl" x="773" y="168" text-anchor="start">đã đủ xa</text><line class="ln" x1="690" y1="234" x2="620" y2="234" marker-end="url(#ar4)"/><text class="lbl" x="655" y="224" text-anchor="middle">hết giờ</text><line class="ln" x1="470" y1="234" x2="400" y2="234" marker-end="url(#ar4)"/><text class="lbl" x="435" y="224" text-anchor="middle">về nhà</text><line class="ln" x1="510" y1="116" x2="402" y2="160" marker-end="url(#ar4)"/><text class="lbl" x="468" y="166" text-anchor="start">người chơi đứng yên: quen dần</text><path class="ln" d="M400,48 C520,2 700,2 765,70" marker-end="url(#ar4)"/><text class="lbl" x="590" y="46" text-anchor="middle">bị áp sát đột ngột (dưới fleeDistance)</text></svg></div>
+<figcaption><b>Hình 6.</b> FSM của nhóm đi bộ (nai, mang, lợn rừng, thỏ, thằn lằn…). Chim, côn trùng, cá và đại bàng có bộ điều khiển riêng với các trạng thái flying, perched, hovering, soaring, swimming.</figcaption>
+</figure>
+<ul>
+<li><b>Hồ sơ loài</b> (<code>profiles.ts</code>) quyết định tính cách: tốc độ, bán kính nhận biết, khoảng cách bỏ chạy, hoạt động ban ngày hay ban đêm. Cùng một FSM, số khác nhau cho ra con nai nhút nhát và con cóc lì lợm.</li>
+<li><b>Người chơi ảnh hưởng tới nhận biết:</b> cúi thấp thì khó bị phát hiện hơn, chạy nước rút thì dễ hơn.</li>
+<li><b>Tiết kiệm:</b> chỉ thú trong bán kính quanh người chơi mới được mô phỏng; con ở xa hơn 80 m chỉ cập nhật mỗi ba frame.</li>
+<li><b>Animation</b> (<code>animation.ts</code>) không dùng file: góc chân, cổ, cánh, đuôi là hàm sin của pha, và pha tăng theo quãng đường đi được.</li>
+</ul>
+</section>
+
+<section id="luu">
+<h2><span class="n">09</span>Lưu và tải</h2>
+<figure>
+<div class="plate"><svg class="dg" viewBox="0 -28 880 270" role="img" aria-label="Lưu và tải: tiến trình vào IndexedDB dưới dạng JSON, ảnh và video dưới dạng Blob, cài đặt vào localStorage; Continue đọc ngược lại qua parseSave và migrate"><defs><marker id="ar7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs><rect class="b hl" x="20" y="96" width="170" height="60" rx="6"/><text class="t" x="105.0" y="122.5" text-anchor="middle">gameStore</text><text class="s" x="105.0" y="137.5" text-anchor="middle">Zustand</text><rect class="b" x="260" y="20" width="180" height="50" rx="6"/><text class="t" x="350.0" y="41.5" text-anchor="middle">toSave()</text><text class="s" x="350.0" y="56.5" text-anchor="middle">SaveData v2 (JSON)</text><rect class="b" x="260" y="101" width="180" height="50" rx="6"/><text class="t" x="350.0" y="122.5" text-anchor="middle">Blob ảnh / video</text><text class="s" x="350.0" y="137.5" text-anchor="middle">capture.ts · recorder.ts</text><rect class="b" x="260" y="182" width="180" height="50" rx="6"/><text class="t" x="350.0" y="203.5" text-anchor="middle">settings</text><text class="s" x="350.0" y="218.5" text-anchor="middle">chất lượng, ngôn ngữ…</text><rect class="b" x="680" y="20" width="180" height="50" rx="6"/><text class="t" x="770.0" y="41.5" text-anchor="middle">IndexedDB</text><text class="s" x="770.0" y="56.5" text-anchor="middle">store: saves</text><rect class="b" x="680" y="101" width="180" height="50" rx="6"/><text class="t" x="770.0" y="122.5" text-anchor="middle">IndexedDB</text><text class="s" x="770.0" y="137.5" text-anchor="middle">store: photos, videos</text><rect class="b" x="680" y="182" width="180" height="50" rx="6"/><text class="t" x="770.0" y="211.0" text-anchor="middle">localStorage</text><line class="ln" x1="190" y1="112" x2="260" y2="50" marker-end="url(#ar7)"/><line class="ln" x1="190" y1="126" x2="260" y2="126" marker-end="url(#ar7)"/><line class="ln" x1="190" y1="140" x2="260" y2="202" marker-end="url(#ar7)"/><line class="ln" x1="440" y1="45" x2="680" y2="45" marker-end="url(#ar7)"/><text class="lbl" x="560.0" y="37" text-anchor="middle">tự lưu khi dirty đổi, và khi về menu</text><line class="ln" x1="440" y1="126" x2="680" y2="126" marker-end="url(#ar7)"/><text class="lbl" x="560.0" y="118" text-anchor="middle">put(id, blob)</text><line class="ln" x1="440" y1="207" x2="680" y2="207" marker-end="url(#ar7)"/><text class="lbl" x="560.0" y="199" text-anchor="middle">mỗi lần đổi cài đặt</text><path class="ln dash" d="M770,20 L770,-6 L105,-6 L105,96" marker-end="url(#ar7)"/><text class="lbl" x="437" y="-12" text-anchor="middle">Continue: parseSave → migrate v1→v2 → applySave  (save hỏng: giữ bản sao, không xoá)</text></svg></div>
+<figcaption><b>Hình 7.</b> Ba loại dữ liệu, ba chỗ ở. Đường đứt nét là chiều đọc lại khi bấm Continue.</figcaption>
+</figure>
+<ul>
+<li><b>Phiên bản schema.</b> Save có trường <code>version</code>. Khi cấu trúc đổi, <code>migrate</code> nâng save cũ lên thay vì bỏ đi. Save từ bản game mới hơn bị từ chối chứ không bị làm hỏng.</li>
+<li><b>Không âm thầm mất dữ liệu.</b> Save hỏng được sao lưu lại trước khi game tạo save mới.</li>
+<li><b>Dự phòng.</b> Nếu trình duyệt chặn IndexedDB (ví dụ trong iframe sandbox), game chuyển sang lưu trong bộ nhớ và báo cho người chơi biết ở menu.</li>
+</ul>
+</section>
+
+<section id="test">
+<h2><span class="n">10</span>Kiểm thử</h2>
+<div class="tablewrap"><table>
+<thead><tr><th>Tầng</th><th>Công cụ</th><th>Kiểm gì</th><th>Số lượng</th><th>Thời gian</th></tr></thead>
+<tbody>
+<tr><td><b>Unit</b></td><td>Vitest</td><td>Hàm thuần: FSM, điểm ảnh, zoom, nhiệm vụ, save, sinh địa hình, bố cục atlas, animation</td><td class="v">152 test, 11 file</td><td class="v">vài giây</td></tr>
+<tr><td><b>Browser</b></td><td>Playwright</td><td>Chơi thật trong Chrome: kịch bản 30 bước, công cụ, cài đặt, lưu và tải</td><td class="v">3 kịch bản</td><td class="v">~16 phút *</td></tr>
+<tr><td><b>QA thăm dò</b></td><td>script trong <code>qa/harness</code></td><td>Đo tốc độ, va chạm, hành vi thú, kích thước ảnh, bộ nhớ, preset đồ hoạ</td><td class="v">110 kiểm tra</td><td class="v">~45 phút *</td></tr>
+</tbody></table></div>
+<p>* Đo trên máy không có GPU, render bằng phần mềm ở khoảng 1 fps. Trên máy thường sẽ nhanh hơn nhiều.</p>
+<p>Bài học rút ra từ chính repo này: các lỗi đã sửa đều lộ ra khi game chạy trong trình duyệt thật, qua test tự động, số đo hoặc ảnh chụp, không phải do đọc code. Ví dụ con trỏ chuột bị giữ khi mở panel ngay sau khi đóng panel khác, hay cánh ong đứng yên ở 10 fps.</p>
+</section>
+
+<section id="doc-code">
+<h2><span class="n">11</span>Thứ tự đọc code</h2>
+<p>Đừng đọc từ file đầu tiên theo bảng chữ cái. Đi theo thứ tự này, mỗi bước khoảng một buổi.</p>
+<ol class="steps">
+<li><div><b><code>src/config.ts</code></b>: mọi hằng số. Đổi <code>PLAYER.walkSpeed</code>, lưu lại, xem người chơi đi nhanh hơn.</div></li>
+<li><div><b><code>src/store/runtime.ts</code> và <code>gameStore.ts</code></b>: hai nơi giữ trạng thái. Đọc tên trường là đủ hình dung game theo dõi những gì.</div></li>
+<li><div><b><code>src/app/GameCanvas.tsx</code></b>: danh sách các hệ thống được gắn vào scene. Đây là mục lục của thế giới 3D.</div></li>
+<li><div><b><code>src/entities/player/Player.tsx</code></b>: input thành vận tốc, vận tốc qua vật lý thành vị trí, vị trí thành camera.</div></li>
+<li><div><b><code>src/entities/wildlife/behavior.ts</code></b> cùng <code>src/tests/behavior.test.ts</code>: đọc test trước, rồi mới đọc code.</div></li>
+<li><div><b><code>src/systems/interaction/Interaction.tsx</code></b>: chất keo nối công cụ, mục tiêu và store (Hình 3).</div></li>
+<li><div><b><code>src/engine/rendering/geoBuilder.ts</code> và <code>world/vegetation/plantModels.ts</code></b>: một cái cây được ghép từ hình khối thế nào.</div></li>
+<li><div><b><code>src/engine/rendering/windMaterial.ts</code></b>: shader đầu tiên nên đọc, ngắn và có chú thích.</div></li>
+<li><div><b><code>e2e/game.spec.ts</code></b>: kịch bản 30 bước. Đọc nó như đọc bản mô tả game bằng code.</div></li>
+</ol>
+</section>
+
+<section id="roadmap">
+<h2><span class="n">12</span>Roadmap cho người mới lập trình game</h2>
+<p>Lộ trình dưới đây đi từ chưa biết lập trình web tới tự thêm được tính năng vào dự án. Thời lượng là ước lượng cho người học khoảng 8 đến 10 giờ mỗi tuần, tổng cộng chừng 8 tháng; người đã biết JavaScript bỏ qua được giai đoạn 0 và 1. Mỗi giai đoạn có một bài tập làm ngay trong repo.</p>
+
+<div class="phase">Nền tảng</div>
+<ol class="road">
+<li class="stage"><div class="num">0</div><div class="card"><h3>Web và công cụ</h3><div class="when">3–4 tuần</div><dl>
+<dt>Học</dt><dd>HTML, CSS cơ bản. JavaScript hiện đại: module, hàm mũi tên, <code>async/await</code>, <code>map/filter</code>. DevTools của trình duyệt, Git, npm.</dd>
+<dt>Trong repo</dt><dd><code>index.html</code>, <code>package.json</code>, <code>src/main.tsx</code></dd>
+<dt>Bài tập</dt><dd>Clone, chạy <code>npm run dev</code>, đổi tốc độ đi bộ trong <code>config.ts</code>, commit thay đổi.</dd></dl></div></li>
+<li class="stage"><div class="num">1</div><div class="card"><h3>TypeScript</h3><div class="when">2 tuần</div><dl>
+<dt>Học</dt><dd>Kiểu cơ bản, <code>interface</code>, union, generics, <code>as const</code>, kiểm tra <code>null</code> nghiêm ngặt.</dd>
+<dt>Trong repo</dt><dd><code>SpeciesRecord</code> trong <code>data/species/index.ts</code>; union <code>GameEvent</code> trong <code>data/quests/quests.ts</code></dd>
+<dt>Bài tập</dt><dd>Thêm một trường tuỳ chọn vào hồ sơ loài và sửa cho <code>npm run typecheck</code> sạch.</dd></dl></div></li>
+<li class="stage"><div class="num">2</div><div class="card"><h3>Toán cho game</h3><div class="when">3 tuần</div><dl>
+<dt>Học</dt><dd>Vector, tích vô hướng và có hướng, lượng giác, ma trận biến đổi, quaternion ở mức khái niệm, nội suy (<code>lerp</code>, <code>damp</code>), noise.</dd>
+<dt>Trong repo</dt><dd><code>utils/math.ts</code>, <code>utils/noise.ts</code>, <code>engine/camera/zoom.ts</code></dd>
+<dt>Bài tập</dt><dd>Tính tay FOV cho zoom 3×, rồi viết một unit test xác nhận.</dd></dl></div></li>
+</ol>
+
+<div class="phase">Cốt lõi của một game</div>
+<ol class="road">
+<li class="stage"><div class="num">3</div><div class="card"><h3>Vòng lặp game và trạng thái</h3><div class="when">2 tuần</div><dl>
+<dt>Học</dt><dd>Game loop, delta time, tách mô phỏng khỏi hiển thị, máy trạng thái, input dạng hỏi (polling) và dạng sự kiện.</dd>
+<dt>Trong repo</dt><dd><code>RenderLoop.tsx</code>, <code>store/runtime.ts</code>, <code>engine/input/input.ts</code>, Hình 2</dd>
+<dt>Bài tập</dt><dd>Đọc lỗi cánh ong trong <code>docs/qa-report.md</code> và giải thích bằng lời của bạn vì sao nó phụ thuộc <code>dt</code>.</dd></dl></div></li>
+<li class="stage"><div class="num">4</div><div class="card"><h3>Three.js cơ bản</h3><div class="when">4 tuần</div><dl>
+<dt>Học</dt><dd>Scene, camera, renderer. Mesh = geometry + material. Ánh sáng, bóng đổ, sương. <code>BufferGeometry</code> và thuộc tính đỉnh, màu đỉnh, UV và texture.</dd>
+<dt>Trong repo</dt><dd><code>geoBuilder.ts</code>, <code>plantModels.ts</code>, <code>world/weather/Sky.tsx</code></dd>
+<dt>Bài tập</dt><dd>Dùng GeoBuilder dựng một loại cây bụi mới và cho nó hiện trong màn hình soi mẫu vật.</dd></dl></div></li>
+<li class="stage"><div class="num">5</div><div class="card"><h3>React, R3F và Zustand</h3><div class="when">3 tuần</div><dl>
+<dt>Học</dt><dd>Component, <code>useMemo</code>, <code>useEffect</code>, <code>useRef</code>. <code>&lt;Canvas&gt;</code> và <code>useFrame</code> của R3F. Store và selector của Zustand. Quy tắc không <code>setState</code> trong vòng lặp frame.</dd>
+<dt>Trong repo</dt><dd><code>GameCanvas.tsx</code>, <code>gameStore.ts</code>, <code>ui/hud/Hud.tsx</code>, Hình 1</dd>
+<dt>Bài tập</dt><dd>Thêm vào HUD một dòng hiển thị độ cao hiện tại của người chơi, đọc từ <code>runtime</code> qua <code>useTick</code>.</dd></dl></div></li>
+</ol>
+
+<div class="phase">Đồ hoạ và thế giới</div>
+<ol class="road">
+<li class="stage"><div class="num">6</div><div class="card"><h3>Shader (GLSL)</h3><div class="when">4 tuần</div><dl>
+<dt>Học</dt><dd>Vertex và fragment shader, <code>uniform</code>, <code>attribute</code>, <code>varying</code>, noise trong shader, alpha test, hiệu ứng fresnel, cách chèn code vào material có sẵn bằng <code>onBeforeCompile</code>.</dd>
+<dt>Trong repo</dt><dd><code>windMaterial.ts</code>, <code>terrainMaterial.ts</code>, <code>world/water/Water.tsx</code>, <code>world/weather/Ambience.tsx</code></dd>
+<dt>Bài tập</dt><dd>Làm gió mạnh gấp đôi khi trời mưa, hoặc đổi màu vùng nước nông.</dd></dl></div></li>
+<li class="stage"><div class="num">7</div><div class="card"><h3>Vật lý và va chạm</h3><div class="when">2 tuần</div><dl>
+<dt>Học</dt><dd>Collider, heightfield, bộ điều khiển nhân vật kiểu kinematic, bước lên bậc, raycast, kiểm tra che khuất.</dd>
+<dt>Trong repo</dt><dd><code>engine/physics/physics.ts</code>, <code>systems/identification/targeting.ts</code></dd>
+<dt>Bài tập</dt><dd>Thêm một thùng gỗ vào <code>world/structures/structures.ts</code> và kiểm tra người chơi không đi xuyên qua.</dd></dl></div></li>
+<li class="stage"><div class="num">8</div><div class="card"><h3>Sinh thế giới và tối ưu</h3><div class="when">4 tuần</div><dl>
+<dt>Học</dt><dd>Heightmap từ noise, seed và tính tất định, chunk streaming, LOD, instancing, draw call, overdraw, cách đo trước khi tối ưu.</dd>
+<dt>Trong repo</dt><dd><code>heightmap.ts</code>, <code>streaming/chunks.ts</code>, <code>placement.ts</code>, <code>Vegetation.tsx</code>, <code>docs/performance.md</code>, Hình 4 và 5</dd>
+<dt>Bài tập</dt><dd>Bật F3, ghi lại draw call và số tam giác ở ba preset trong rừng mưa, giải thích chênh lệch.</dd></dl></div></li>
+</ol>
+
+<div class="phase">Gameplay và phát hành</div>
+<ol class="road">
+<li class="stage"><div class="num">9</div><div class="card"><h3>AI và animation</h3><div class="when">2 tuần</div><dl>
+<dt>Học</dt><dd>FSM, cảm nhận (bán kính, tầm nhìn), steering, bầy đàn, animation thủ tục, giảm tần suất cập nhật theo khoảng cách.</dd>
+<dt>Trong repo</dt><dd><code>behavior.ts</code>, <code>profiles.ts</code>, <code>WildlifeSystem.ts</code>, <code>animation.ts</code>, Hình 6</dd>
+<dt>Bài tập</dt><dd>Thêm một loài mới theo mục “Adding a species” trong README, kèm nguồn kiểm chứng.</dd></dl></div></li>
+<li class="stage"><div class="num">10</div><div class="card"><h3>Hệ thống gameplay, UI, dữ liệu</h3><div class="when">3 tuần</div><dl>
+<dt>Học</dt><dd>Thiết kế hướng dữ liệu, sự kiện gameplay, đa ngôn ngữ, IndexedDB, MediaRecorder, Web Audio.</dd>
+<dt>Trong repo</dt><dd><code>data/quests/quests.ts</code>, <code>systems/quests/engine.ts</code>, <code>i18n/</code>, <code>systems/persistence/</code>, Hình 3 và 7</dd>
+<dt>Bài tập</dt><dd>Thêm nhiệm vụ thứ sáu chỉ bằng dữ liệu và chuỗi dịch, không sửa engine.</dd></dl></div></li>
+<li class="stage"><div class="num">11</div><div class="card"><h3>Kiểm thử và phát hành</h3><div class="when">2 tuần</div><dl>
+<dt>Học</dt><dd>Unit test cho hàm thuần, test tự động trên trình duyệt, đo hiệu năng và bộ nhớ, build tĩnh và deploy.</dd>
+<dt>Trong repo</dt><dd><code>src/tests/</code>, <code>e2e/game.spec.ts</code>, <code>qa/harness/</code>, <code>npm run check</code></dd>
+<dt>Bài tập</dt><dd>Viết test cho tính năng bạn thêm ở giai đoạn 9 hoặc 10, rồi chạy trọn <code>npm run test:e2e</code>.</dd></dl></div></li>
+</ol>
+<div class="note"><b>Cách học hiệu quả với repo này:</b> mỗi giai đoạn, đọc tài liệu chính thức một phần, rồi mở đúng file trong cột “Trong repo” và sửa một con số xem điều gì xảy ra. Làm hỏng rồi sửa lại dạy nhiều hơn đọc thêm một chương.</div>
+</section>
+
+<section id="tai-lieu">
+<h2><span class="n">13</span>Tài liệu nên đọc</h2>
+<ul class="links">
+<li><a href="https://developer.mozilla.org/">MDN Web Docs</a><span>HTML, CSS, JavaScript, mọi Web API (giai đoạn 0, 10)</span></li>
+<li><a href="https://javascript.info/">javascript.info</a><span>JavaScript hiện đại từ đầu (giai đoạn 0)</span></li>
+<li><a href="https://www.typescriptlang.org/docs/handbook/intro.html">TypeScript Handbook</a><span>Tài liệu chính thức (giai đoạn 1)</span></li>
+<li><a href="https://gameprogrammingpatterns.com/">Game Programming Patterns</a><span>Chương Game Loop, State, Update Method (giai đoạn 3, 9)</span></li>
+<li><a href="https://threejs.org/manual/">Three.js Manual</a><span>Hướng dẫn chính thức, đọc cùng <a href="https://threejs.org/docs/">API docs</a> (giai đoạn 4)</span></li>
+<li><a href="https://react.dev/learn">react.dev/learn</a><span>React chính thức (giai đoạn 5)</span></li>
+<li><a href="https://r3f.docs.pmnd.rs/getting-started/introduction">React Three Fiber docs</a><span><code>Canvas</code>, <code>useFrame</code>, lưu ý hiệu năng (giai đoạn 5)</span></li>
+<li><a href="https://zustand.docs.pmnd.rs/learn/getting-started/introduction">Zustand docs</a><span>Store và selector (giai đoạn 5)</span></li>
+<li><a href="https://thebookofshaders.com/">The Book of Shaders</a><span>Fragment shader từng bước (giai đoạn 6)</span></li>
+<li><a href="https://webgl2fundamentals.org/">WebGL2 Fundamentals</a><span>Hiểu thứ Three.js làm bên dưới (giai đoạn 6, 8)</span></li>
+<li><a href="https://rapier.rs/docs/">Rapier docs</a><span>Collider và character controller (giai đoạn 7)</span></li>
+<li><a href="https://www.redblobgames.com/">Red Blob Games</a><span>Noise, sinh bản đồ, giải thích bằng hình tương tác (giai đoạn 2, 8)</span></li>
+<li><a href="https://vitest.dev/guide/">Vitest</a> · <a href="https://playwright.dev/docs/intro">Playwright</a><span>Hai công cụ test của dự án (giai đoạn 11)</span></li>
+<li><a href="https://vite.dev/guide/">Vite Guide</a><span>Dev server và build (giai đoạn 0, 11)</span></li>
+</ul>
+<p>Trong repo: <code>README.md</code>, <code>docs/architecture.md</code>, <code>docs/game-design.md</code>, <code>docs/performance.md</code>, <code>docs/implementation-status.md</code>, <code>docs/qa-report.md</code>.</p>
+</section>
+
+<section id="thuat-ngu">
+<h2><span class="n">14</span>Thuật ngữ</h2>
+<dl class="gloss">
+<dt>Frame</dt><dd>Một lần vẽ màn hình. 60 fps nghĩa là mỗi frame có khoảng 16,7 mili giây.</dd>
+<dt>Delta time (dt)</dt><dd>Số giây từ frame trước. Nhân mọi chuyển động với nó để tốc độ không phụ thuộc máy.</dd>
+<dt>Mesh, geometry, material</dt><dd>Mesh là vật thể vẽ được. Geometry là hình dạng (các đỉnh). Material quyết định bề mặt trông ra sao.</dd>
+<dt>Shader</dt><dd>Chương trình nhỏ chạy trên GPU. Vertex shader đặt vị trí từng đỉnh, fragment shader tô màu từng điểm ảnh.</dd>
+<dt>Uniform, attribute</dt><dd>Uniform là giá trị chung cho cả vật thể (thời gian, hướng mặt trời). Attribute là giá trị riêng từng đỉnh (vị trí, màu, độ rung gió).</dd>
+<dt>Draw call</dt><dd>Một lệnh vẽ gửi tới GPU. Ít lệnh lớn nhanh hơn nhiều lệnh nhỏ.</dd>
+<dt>Instancing</dt><dd>Vẽ nhiều bản sao của một geometry trong một draw call, mỗi bản một ma trận vị trí.</dd>
+<dt>LOD</dt><dd>Level of detail. Vật ở xa dùng model ít tam giác hơn.</dd>
+<dt>Chunk</dt><dd>Một ô của bản đồ, ở đây 64 m. Thế giới được nạp và bỏ theo từng chunk.</dd>
+<dt>Heightmap</dt><dd>Lưới số ghi độ cao mặt đất tại từng điểm.</dd>
+<dt>Seed, tất định</dt><dd>Seed là số khởi đầu của bộ sinh ngẫu nhiên. Cùng seed cho cùng kết quả, nên thế giới giống nhau ở mọi lần chạy.</dd>
+<dt>FSM</dt><dd>Máy trạng thái hữu hạn: một tập trạng thái và quy tắc chuyển giữa chúng.</dd>
+<dt>Raycast, che khuất</dt><dd>Bắn một tia từ camera để biết nó chạm gì trước. Dùng để kiểm tra con vật có bị thân cây che không.</dd>
+<dt>Alpha test</dt><dd>Bỏ những điểm ảnh có độ trong suốt dưới ngưỡng. Cách rẻ để một tấm phẳng có viền hình lá.</dd>
+<dt>FOV</dt><dd>Góc nhìn của camera. Thu hẹp FOV chính là zoom quang học.</dd>
+<dt>Collider</dt><dd>Hình đơn giản mà engine vật lý dùng để tính va chạm thay cho model thật.</dd>
+<dt>Hàm thuần</dt><dd>Hàm chỉ phụ thuộc tham số và không thay đổi gì bên ngoài. Dễ test nhất.</dd>
+<dt>i18n</dt><dd>Đa ngôn ngữ. Mọi chuỗi hiển thị nằm trong <code>i18n/vi.ts</code> và <code>en.ts</code>, không viết thẳng trong component.</dd>
+<dt>E2E test</dt><dd>Test đầu-cuối: máy điều khiển trình duyệt thật và chơi như người dùng.</dd>
+</dl>
+</section>
+
+<footer>Số liệu lấy từ repo và từ các lần chạy test ngày 11/11/2026. Thời lượng trong roadmap là ước lượng, không phải cam kết.</footer>
+</main>
+</div>
+</body>
+</html>
